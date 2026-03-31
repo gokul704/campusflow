@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Default text in dark mode so headings/body inherit light text unless overridden */
+  html.dark {
+    color-scheme: dark;
+    @apply text-gray-100;
+  }
+}

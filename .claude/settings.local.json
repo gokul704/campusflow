@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import sys,json; [print\\(json.dumps\\(json.loads\\(l\\), indent=2\\)\\) for l in sys.stdin if json.loads\\(l\\).get\\(''''type''''\\) in [''''user'''',''''assistant'''']]\")",
+      "Bash(for dir:*)",
+      "Bash(do echo:*)",
+      "Read(//Users/gokul/Desktop/campusflow/**)",
+      "Bash(done)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(ls /Users/gokul/Desktop/campusflow/apps/web/src/app/\\\\\\(dashboard\\\\\\)/dashboard/)",
+      "Bash(npm run:*)",
+      "Bash(brew install:*)",
+      "Bash(pdftoppm -v)",
+      "Bash(pdftotext \"/Users/gokul/Downloads/MISH LMS SOFTWARE DOCUMENT \\(Autosaved\\)_260325_215320.pdf\" -)",
+      "Bash(npx dotenv-cli:*)",
+      "Bash(cut -d'\\(' -f1)",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s http://localhost:4000/health)",
+      "Bash(curl -s http://localhost:4001/health)",
+      "Bash(ls apps/web/.env*)",
+      "Bash(kill 78668)",
+      "Bash(curl -s -X POST http://localhost:4000/api/auth/login -H \"Content-Type: application/json\" -H \"x-tenant-key: 6dbf9e21-ac4b-407b-9f55-bb1bd0277c26\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"admin@mish.edu\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"Admin@1234\"\"\"\"}')",
+      "Bash(dotenv -e .env -- node -e \":*)",
+      "Bash(node -e \"const b = require\\(''bcryptjs''\\); b.hash\\(''Admin@1234'',10\\).then\\(h => console.log\\(h\\)\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(npx dotenv -e .env -- node -e \":*)",
+      "Bash(curl -s -X POST http://localhost:4000/api/auth/login -H \"Content-Type: application/json\" -H \"x-tenant-key: 6dbf9e21-ac4b-407b-9f55-bb1bd0277c26\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"mamandurugokul1@gmail.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"Admin@1234\"\"\"\"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/login)",
+      "Bash(curl -s http://localhost:3001/login)",
+      "Bash(curl -v http://localhost:3001/dashboard)",
+      "Bash(ls /Users/gokul/Desktop/campusflow/apps/web/.next/server/app/\\\\\\(dashboard\\\\\\)/dashboard/)",
+      "Bash(ls /Users/gokul/Desktop/campusflow/apps/web/.next/server/app/\\\\\\(dashboard\\\\\\)/)",
+      "Bash(ls -la /Users/gokul/Desktop/campusflow/apps/web/.next/server/app/\\\\\\(dashboard\\\\\\)/)"
+    ]
+  }
+}

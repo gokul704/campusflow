@@ -1,0 +1,470 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// TENANT (Institute)
+// ─────────────────────────────────────────────
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique // e.g. "mish" → mish.campusflow.io
+  publicKey   String   @unique @default(uuid()) // random UUID for client identification
+  domain      String?  @unique // optional custom domain
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  plan        Plan     @default(STARTER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users         User[]
+  courses       Course[]
+  departments   Department[]
+  batches       Batch[]
+  sections      Section[]
+  fees          FeeStructure[]
+  timetables    Timetable[]
+  events        Event[]
+  notifications Notification[]
+
+  @@map("tenants")
+}
+
+enum Plan {
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+// ─────────────────────────────────────────────
+// USER & ROLES
+// ─────────────────────────────────────────────
+
+model User {
+  id         String    @id @default(cuid())
+  tenantId   String
+  email      String
+  phone      String?
+  password   String
+  firstName  String
+  lastName   String
+  dateOfBirth DateTime? @db.Date
+  avatarUrl  String?
+  role       Role      @default(STUDENT)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  student       Student?
+  faculty       Faculty?
+  sessions      Session[]
+  parentLinks   ParentStudent[] @relation("ParentUser")
+  notifications Notification[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  FACULTY
+  STUDENT
+  PARENT
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ─────────────────────────────────────────────
+// ACADEMIC STRUCTURE
+// ─────────────────────────────────────────────
+
+model Department {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  code      String
+  createdAt DateTime @default(now())
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  courses   Course[]
+  faculty   Faculty[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("departments")
+}
+
+model Batch {
+  id           String    @id @default(cuid())
+  tenantId     String
+  name         String    // e.g. "CSE 2024-2027"
+  startYear    Int
+  endYear      Int
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  sections     Section[]
+  students     Student[]     // kept for convenience (student.batchId)
+  batchCourses BatchCourse[]
+
+  @@index([tenantId])
+  @@map("batches")
+}
+
+// ─── SECTION ──────────────────────────────────
+// Sections within a batch: A, B, C, D
+// A student is assigned to a section and stays there for all years.
+// Faculty teaches a course to a specific section.
+model Section {
+  id        String   @id @default(cuid())
+  tenantId  String
+  batchId   String
+  name      String   // "A", "B", "C", "D"
+  createdAt DateTime @default(now())
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  batch        Batch         @relation(fields: [batchId], references: [id])
+  students     Student[]
+  batchCourses BatchCourse[]
+
+  @@unique([batchId, name])
+  @@index([tenantId])
+  @@map("sections")
+}
+
+model Course {
+  id           String    @id @default(cuid())
+  tenantId     String
+  departmentId String?   // null = common course (shared across departments)
+  name         String
+  code         String
+  credits      Int       @default(0)
+  isCommon     Boolean   @default(false) // true = shared across all departments
+  createdAt    DateTime  @default(now())
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  department    Department?   @relation(fields: [departmentId], references: [id])
+  batchCourses  BatchCourse[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("courses")
+}
+
+// Which courses a section takes in a given semester, taught by which faculty.
+// The same faculty can teach the same course to different sections.
+model BatchCourse {
+  id        String   @id @default(cuid())
+  tenantId  String
+  batchId   String
+  sectionId String   // which section this assignment is for
+  courseId   String
+  facultyId String?  // assigned faculty
+  semester  Int
+  createdAt DateTime @default(now())
+
+  batch       Batch        @relation(fields: [batchId], references: [id])
+  section     Section      @relation(fields: [sectionId], references: [id])
+  course      Course       @relation(fields: [courseId], references: [id])
+  faculty     Faculty?     @relation(fields: [facultyId], references: [id])
+  attendances Attendance[]
+  timetables  Timetable[]
+  assignments Assignment[]
+  examGrades  ExamGrade[]
+
+  @@unique([sectionId, courseId, semester])
+  @@index([tenantId])
+  @@index([batchId, semester])
+  @@map("batch_courses")
+}
+
+// ─────────────────────────────────────────────
+// STUDENT & FACULTY PROFILES
+// ─────────────────────────────────────────────
+
+model Student {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  tenantId     String
+  batchId      String   // denormalized from section for easy queries
+  sectionId    String   // the section the student belongs to (A, B, C, D)
+  rollNumber   String
+  parentName   String?
+  parentPhone  String?
+  address      String?
+  createdAt    DateTime @default(now())
+
+  user         User            @relation(fields: [userId], references: [id])
+  batch        Batch           @relation(fields: [batchId], references: [id])
+  section      Section         @relation(fields: [sectionId], references: [id])
+  attendances  Attendance[]
+  feePayments  FeePayment[]
+  parents      ParentStudent[]
+  examGrades   ExamGrade[]
+
+  @@unique([tenantId, rollNumber])
+  @@index([tenantId])
+  @@index([sectionId])
+  @@map("students")
+}
+
+model Faculty {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  tenantId     String
+  departmentId String
+  designation  String
+  qualification String?
+  createdAt    DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id])
+  department   Department    @relation(fields: [departmentId], references: [id])
+  batchCourses BatchCourse[]
+
+  @@index([tenantId])
+  @@map("faculty")
+}
+
+// Links a PARENT user to one or more students
+model ParentStudent {
+  id        String   @id @default(cuid())
+  tenantId  String
+  parentId  String   // User with role PARENT
+  studentId String
+
+  parent    User     @relation("ParentUser", fields: [parentId], references: [id])
+  student   Student  @relation(fields: [studentId], references: [id])
+
+  @@unique([parentId, studentId])
+  @@index([tenantId])
+  @@map("parent_students")
+}
+
+// ─────────────────────────────────────────────
+// ENROLLMENT & ATTENDANCE
+// ─────────────────────────────────────────────
+
+model Attendance {
+  id            String           @id @default(cuid())
+  tenantId      String
+  studentId     String
+  batchCourseId String
+  date          DateTime         @db.Date
+  status        AttendanceStatus @default(PRESENT)
+  createdAt     DateTime         @default(now())
+
+  student      Student     @relation(fields: [studentId], references: [id])
+  batchCourse  BatchCourse @relation(fields: [batchCourseId], references: [id])
+
+  @@unique([studentId, batchCourseId, date])
+  @@index([tenantId])
+  @@index([tenantId, batchCourseId, date])
+  @@map("attendances")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+// ─────────────────────────────────────────────
+// ASSIGNMENTS
+// ─────────────────────────────────────────────
+
+model Assignment {
+  id            String   @id @default(cuid())
+  tenantId      String
+  batchCourseId String
+  title         String
+  description   String?
+  dueDate       DateTime
+  maxMarks      Float    @default(100)
+  fileUrl       String?
+  createdAt     DateTime @default(now())
+
+  batchCourse BatchCourse  @relation(fields: [batchCourseId], references: [id])
+  submissions Submission[]
+
+  @@index([tenantId])
+  @@map("assignments")
+}
+
+model Submission {
+  id           String   @id @default(cuid())
+  tenantId     String
+  assignmentId String
+  studentId    String
+  fileUrl      String?
+  remarks      String?
+  marks        Float?
+  submittedAt  DateTime @default(now())
+
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+
+  @@unique([assignmentId, studentId])
+  @@index([tenantId])
+  @@map("submissions")
+}
+
+// ─────────────────────────────────────────────
+// EXAM GRADES (Semester / Mid-term)
+// ─────────────────────────────────────────────
+
+model ExamGrade {
+  id            String   @id @default(cuid())
+  tenantId      String
+  studentId     String
+  batchCourseId String
+  examType      String   // e.g. "MIDTERM", "FINAL", "PRACTICAL", "INTERNAL"
+  marks         Float
+  maxMarks      Float    @default(100)
+  remarks       String?
+  createdAt     DateTime @default(now())
+
+  student      Student     @relation(fields: [studentId], references: [id])
+  batchCourse  BatchCourse @relation(fields: [batchCourseId], references: [id])
+
+  @@unique([studentId, batchCourseId, examType])
+  @@index([tenantId])
+  @@map("exam_grades")
+}
+
+// ─────────────────────────────────────────────
+// TIMETABLE
+// ─────────────────────────────────────────────
+
+model Timetable {
+  id            String   @id @default(cuid())
+  tenantId      String
+  batchCourseId String
+  dayOfWeek     Int      // 0=Mon ... 5=Sat
+  startTime     String   // "09:00"
+  endTime       String   // "10:00"
+  room          String?
+  createdAt     DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  batchCourse BatchCourse @relation(fields: [batchCourseId], references: [id])
+
+  @@index([tenantId])
+  @@map("timetables")
+}
+
+// ─────────────────────────────────────────────
+// EVENTS / CALENDAR
+// ─────────────────────────────────────────────
+
+model Event {
+  id          String    @id @default(cuid())
+  tenantId    String
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  eventType   EventType @default(EVENT)
+  createdAt   DateTime  @default(now())
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("events")
+}
+
+enum EventType {
+  EVENT
+  WORKSHOP
+  HOLIDAY
+  EXAM
+  ASSIGNMENT_DUE
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// FEE MANAGEMENT
+// ─────────────────────────────────────────────
+
+model FeeStructure {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  amount      Float
+  dueDate     DateTime
+  isRecurring Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  payments    FeePayment[]
+
+  @@index([tenantId])
+  @@map("fee_structures")
+}
+
+model FeePayment {
+  id                String        @id @default(cuid())
+  tenantId          String
+  studentId         String
+  feeStructureId    String
+  amount            Float
+  status            PaymentStatus @default(PENDING)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+
+  student        Student      @relation(fields: [studentId], references: [id])
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id])
+
+  @@index([tenantId])
+  @@map("fee_payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
