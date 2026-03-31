@@ -35,7 +35,7 @@ export async function attendanceReport(tenantId: string, batchCourseId: string) 
     else if (a.status === "EXCUSED") entry.excused += 1;
   }
 
-  return students.map((student) => {
+  return students.map((student: { id: string; rollNumber: string; user: { firstName: string; lastName: string } }) => {
     const stats = attendanceMap.get(student.id) ?? { present: 0, absent: 0, late: 0, excused: 0, total: 0 };
     return {
       rollNumber: student.rollNumber,
@@ -103,14 +103,14 @@ export async function feeReport(tenantId: string) {
     orderBy: { dueDate: "asc" },
   });
 
-  const structureSummary = structures.map((s) => ({
+  const structureSummary = structures.map((s: { id: string; name: string; amount: number; dueDate: Date | null; _count: { payments: number }; payments: { amount: number }[] }) => ({
     id: s.id,
     name: s.name,
     amount: s.amount,
     dueDate: s.dueDate,
     totalPayments: s._count.payments,
     paidCount: s.payments.length,
-    paidAmount: s.payments.reduce((sum, p) => sum + p.amount, 0),
+    paidAmount: s.payments.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0),
   }));
 
   return {

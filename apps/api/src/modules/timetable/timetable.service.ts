@@ -39,7 +39,7 @@ export async function listTodaysSlotsForStudent(tenantId: string, studentId: str
     where: { tenantId, sectionId: student.sectionId },
     select: { id: true },
   });
-  const ids = batchCourses.map((b) => b.id);
+  const ids = batchCourses.map((b: { id: string }) => b.id);
   if (ids.length === 0) {
     return { dayName: DAY_NAMES[dow], slots: [] };
   }

@@ -1,5 +1,3 @@
-import { Tenant, User, Role } from "@campusflow/db";
-
 declare global {
   namespace Express {
     interface Request {
@@ -13,8 +11,10 @@ declare global {
         id: string;
         tenantId: string;
         email: string;
-        role: Role;
+        role: string;
       };
     }
   }
 }
+
+export {};

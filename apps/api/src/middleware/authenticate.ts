@@ -45,7 +45,7 @@ export function authenticate(
 
 export function authorize(...roles: Role[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user || !roles.includes(req.user.role as Role)) {
       res.status(403).json({ error: "Insufficient permissions" });
       return;
     }

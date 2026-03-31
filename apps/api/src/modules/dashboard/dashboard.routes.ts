@@ -106,7 +106,7 @@ router.get(
     orderBy: { startYear: "desc" },
     take: 6,
   });
-  const batchDistribution = batches.map((b) => ({
+  const batchDistribution = batches.map((b: { name: string; _count: { students: number } }) => ({
     name: b.name,
     value: b._count.students,
   }));
@@ -154,7 +154,7 @@ router.get(
     where: { tenantId, startDate: { gte: monthStart, lte: monthEnd } },
     select: { startDate: true },
   });
-  const eventDays = [...new Set(monthEvents.map(e => new Date(e.startDate).getDate()))];
+  const eventDays = [...new Set(monthEvents.map((e: { startDate: Date }) => new Date(e.startDate).getDate()))];
 
   // ── Recent notices (assignments + events combined) ────────────────────────
   const [recentAssignments, recentEvents] = await Promise.all([
@@ -186,7 +186,7 @@ router.get(
     where: { tenantId },
     include: { _count: { select: { faculty: true, courses: true } } },
   });
-  const deptOverview = departments.map((d) => ({
+  const deptOverview = departments.map((d: { name: string; code: string | null; _count: { faculty: number; courses: number } }) => ({
     name: d.code ?? d.name,
     fullName: d.name,
     faculty: d._count.faculty,
