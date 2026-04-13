@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "prisma generate --schema=packages/db/prisma/schema.prisma",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
@@ -16,12 +17,16 @@
     "db:studio": "cd packages/db && npx prisma studio"
   },
   "devDependencies": {
+    "prettier": "^3.4.2",
+    "prisma": "^6.1.0",
     "turbo": "^2.3.3",
-    "typescript": "^5.7.2",
-    "prettier": "^3.4.2"
+    "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=20.0.0"
   },
-  "packageManager": "npm@10.9.2"
+  "packageManager": "npm@10.9.2",
+  "dependencies": {
+    "@prisma/client": "^6.19.2"
+  }
 }

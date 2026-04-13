@@ -32,7 +32,11 @@
       "Bash(curl -v http://localhost:3001/dashboard)",
       "Bash(ls /Users/gokul/Desktop/campusflow/apps/web/.next/server/app/\\\\\\(dashboard\\\\\\)/dashboard/)",
       "Bash(ls /Users/gokul/Desktop/campusflow/apps/web/.next/server/app/\\\\\\(dashboard\\\\\\)/)",
-      "Bash(ls -la /Users/gokul/Desktop/campusflow/apps/web/.next/server/app/\\\\\\(dashboard\\\\\\)/)"
+      "Bash(ls -la /Users/gokul/Desktop/campusflow/apps/web/.next/server/app/\\\\\\(dashboard\\\\\\)/)",
+      "Bash(xargs cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

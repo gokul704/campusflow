@@ -468,3 +468,11 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
+
+// Public marketing / landing page aggregate (not tenant-scoped).
+model SiteCounter {
+  id    String @id
+  count Int    @default(0)
+
+  @@map("site_counters")
+}

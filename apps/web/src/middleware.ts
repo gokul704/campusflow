@@ -44,9 +44,12 @@ export function middleware(req: NextRequest) {
 }
 
 /**
- * Skip all `/_next/*` (RSC payloads, Flight, HMR, chunks), not only `static` + `image`.
- * Running middleware on those requests can interfere with prefetch / client navigations.
+ * Skip all of `/_next/*` (RSC Flight, HMR, webpack, chunks, image optimizer, etc.).
+ * Matching only `_next/static` + `_next/image` lets other internal `/_next/...` requests
+ * hit middleware and can surface as 500s or broken navigation in dev/production.
  */
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/|favicon\\.ico|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|css|js|woff2?)).*)",
+  ],
 };
