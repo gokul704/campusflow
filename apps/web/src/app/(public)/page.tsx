@@ -44,9 +44,9 @@ const DEPT_PHOTOS = [GALLERY[6], GALLERY[12], GALLERY[15], GALLERY[18]] as const
 const FACILITY_PHOTOS = [GALLERY[4], GALLERY[5], GALLERY[7], GALLERY[9]] as const;
 const EVENT_SPOTLIGHT_INDICES = [13, 14, 19] as const;
 
-/** Same visual height for campus highlights + latest news cards */
+/** Same visual height for campus highlights + latest news cards (shorter on small phones) */
 const EVENT_CARD_HEIGHT =
-  "h-[26rem] min-h-[26rem] sm:h-[28rem] sm:min-h-[28rem] lg:h-[30rem] lg:min-h-[30rem]";
+  "h-[21rem] min-h-[21rem] sm:h-[26rem] sm:min-h-[26rem] lg:h-[28rem] lg:min-h-[28rem] xl:h-[30rem] xl:min-h-[30rem]";
 
 function facultyInitials(fullName: string): string {
   const stripped = fullName.replace(/^(Dr\.|Mr\.|Mrs\.|Ms\.)\s*/i, "").trim();
@@ -244,18 +244,24 @@ export default function HomePage() {
   }, [lightbox, newsModal, facultyPageCount]);
 
   return (
-    <div className="min-h-screen bg-[#f5f2f0] text-slate-900 antialiased">
+    <div className="min-h-screen w-full min-w-0 max-w-[100vw] overflow-x-hidden bg-[#f5f2f0] text-slate-900 antialiased">
       {/* Top bar */}
       <div className="mish-bg-top border-b border-[#5c2226] text-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center gap-4">
-            <a href="tel:+919100072758" className="flex items-center gap-1.5 hover:text-[#f0e0a0]">
-              <Phone className="h-4 w-4" />
-              +91 9100-072-758
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-2 gap-y-2 px-3 py-2 text-xs sm:px-6 sm:text-sm lg:px-8">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 sm:gap-4">
+            <a
+              href="tel:+919100072758"
+              className="flex min-w-0 max-w-full items-center gap-1.5 hover:text-[#f0e0a0] sm:shrink-0"
+            >
+              <Phone className="h-4 w-4 shrink-0" />
+              <span className="truncate sm:whitespace-normal">+91 9100-072-758</span>
             </a>
-            <a href="mailto:admin@mish.com" className="flex items-center gap-1.5 hover:text-[#f0e0a0]">
-              <Mail className="h-4 w-4" />
-              admin@mish.com
+            <a
+              href="mailto:admin@mish.com"
+              className="flex min-w-0 max-w-full items-center gap-1.5 hover:text-[#f0e0a0] sm:shrink-0"
+            >
+              <Mail className="h-4 w-4 shrink-0" />
+              <span className="truncate sm:whitespace-normal">admin@mish.com</span>
             </a>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 md:gap-4">
@@ -292,12 +298,12 @@ export default function HomePage() {
 
       {/* Main navigation */}
       <header className="sticky top-0 z-50 border-b-2 border-[#7c2d32]/20 bg-white shadow-sm">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <a href="#top" className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7c2d32]">
-              <GraduationCap className="h-6 w-6 text-white" />
+        <div className="mx-auto flex min-h-14 max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:h-16 sm:min-h-0 sm:px-6 sm:py-0 lg:px-8">
+          <a href="#top" className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#7c2d32] sm:h-10 sm:w-10">
+              <GraduationCap className="h-5 w-5 text-white sm:h-6 sm:w-6" />
             </div>
-            <span className="text-lg font-bold text-[#5c2226] sm:text-xl">MISH</span>
+            <span className="truncate text-base font-bold text-[#5c2226] sm:text-lg md:text-xl">MISH</span>
           </a>
 
           <nav className="hidden items-center gap-1 lg:flex">
@@ -380,7 +386,7 @@ export default function HomePage() {
             </Link>
             <button
               type="button"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={copy.toggleMenu}
             >
@@ -391,33 +397,37 @@ export default function HomePage() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="border-t border-slate-200 bg-white px-4 py-4 lg:hidden">
-            <div className="flex flex-col gap-1">
-              <a href="#about" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+          <div className="max-h-[min(75vh,32rem)] overflow-y-auto overscroll-contain border-t border-slate-200 bg-white px-3 py-3 sm:px-4 sm:py-4 lg:hidden">
+            <div className="flex flex-col gap-0.5">
+              <a
+                href="#about"
+                className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 {copy.navAboutSub}
               </a>
-              <a href="#principal" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#principal" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navPrincipal}
               </a>
-              <a href="#programs" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#programs" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navAcademics}
               </a>
-              <a href="#departments" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#departments" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navDepartments}
               </a>
-              <a href="#faculty" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#faculty" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navFaculty}
               </a>
-              <a href="#campus" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#campus" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navFacilities}
               </a>
-              <a href="#events" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#events" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navEvents}
               </a>
-              <a href="#gallery" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#gallery" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navGallery}
               </a>
-              <a href="#contact" className="rounded px-3 py-2 text-sm font-medium text-slate-700" onClick={() => setMobileMenuOpen(false)}>
+              <a href="#contact" className="rounded px-3 py-2.5 text-sm font-medium text-slate-700 active:bg-slate-50" onClick={() => setMobileMenuOpen(false)}>
                 {copy.navContact}
               </a>
               <Link
@@ -435,38 +445,38 @@ export default function HomePage() {
       {/* Hero */}
       <section id="top" className="relative overflow-hidden border-b-2 border-[#7c2d32]/30 bg-gradient-to-b from-[#fdf8f0] to-white">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2760%27 height=%2760%27 viewBox=%270 0 60 60%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg fill=%27none%27 fill-rule=%27evenodd%27%3E%3Cg fill=%27%237c2d32%27 fill-opacity=%270.05%27%3E%3Cpath d=%27M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-80" />
-        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
-              <div className="mb-6 flex items-center gap-2 text-[#7c2d32]">
-                <Quote className="h-8 w-8" />
-                <p className="landing-serif text-xl font-semibold text-[#5c2226] sm:text-2xl">
+        <div className="relative mx-auto max-w-7xl px-3 py-10 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+          <div className="grid gap-8 sm:gap-10 lg:grid-cols-2 lg:items-center">
+            <div className="min-w-0">
+              <div className="mb-5 flex flex-col gap-2 text-[#7c2d32] sm:mb-6 sm:flex-row sm:items-center sm:gap-3">
+                <Quote className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
+                <p className="landing-serif min-w-0 text-lg font-semibold leading-snug text-[#5c2226] sm:text-xl md:text-2xl">
                   {copy.heroQuotes[quoteIndex].text}
                 </p>
               </div>
-              <h1 className="landing-serif text-3xl font-bold tracking-tight text-[#5c2226] sm:text-4xl lg:text-5xl">
+              <h1 className="landing-serif text-2xl font-bold tracking-tight text-[#5c2226] sm:text-4xl lg:text-5xl">
                 {copy.heroTitle}
               </h1>
-              <p className="mt-4 text-lg text-slate-600">
+              <p className="mt-3 text-base leading-relaxed text-slate-600 sm:mt-4 sm:text-lg">
                 {copy.heroLead}
               </p>
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="mt-6 flex w-full max-w-md flex-col gap-3 sm:mt-8 sm:max-w-none sm:flex-row sm:flex-wrap">
                 <a
                   href="#programs"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#7c2d32] px-5 py-2.5 font-semibold text-white shadow hover:bg-[#5c2226]"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-[#7c2d32] px-5 py-2.5 font-semibold text-white shadow hover:bg-[#5c2226] sm:w-auto"
                 >
                   {copy.heroExplore} <ArrowRight className="h-4 w-4" />
                 </a>
                 <a
                   href="#contact"
-                  className="inline-flex items-center gap-2 rounded-lg border-2 border-[#7c2d32] bg-white px-5 py-2.5 font-semibold text-[#7c2d32] hover:bg-[#fdf8f0]"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border-2 border-[#7c2d32] bg-white px-5 py-2.5 font-semibold text-[#7c2d32] hover:bg-[#fdf8f0] sm:w-auto"
                 >
                   {copy.heroContact}
                 </a>
               </div>
             </div>
-            <div className="relative mt-6 lg:mt-0">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-xl ring-1 ring-slate-200/50">
+            <div className="relative mt-4 min-w-0 sm:mt-6 lg:mt-0">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-lg shadow-xl ring-1 ring-slate-200/50 sm:rounded-xl">
                 <Image
                   src={GALLERY[heroImgIndex] ?? BUILDING}
                   alt={copy.heroCampusAlt}
@@ -498,10 +508,10 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="about" className="border-b border-slate-200/60 bg-white py-16 sm:py-20">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-8">
+      <section id="about" className="border-b border-slate-200/60 bg-white py-12 sm:py-16 md:py-20">
+        <div className="mx-auto grid max-w-7xl gap-8 px-3 sm:gap-10 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-8">
           <div>
-            <h2 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+            <h2 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
               {copy.aboutHeading}
             </h2>
             <p className="mt-6 text-slate-600 leading-relaxed">
@@ -513,15 +523,21 @@ export default function HomePage() {
           </div>
           <div className="relative">
             <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lg ring-1 ring-slate-200/50">
-              <Image src={BUILDING} alt={copy.buildingAlt} fill className="object-cover" sizes="50vw" />
+              <Image
+                src={BUILDING}
+                alt={copy.buildingAlt}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
             </div>
           </div>
         </div>
       </section>
 
       {/* Principal — brief profile */}
-      <section id="principal" className="border-b border-slate-200/60 bg-[#fdf8f0] py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="principal" className="border-b border-slate-200/60 bg-[#fdf8f0] py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[auto,minmax(0,1fr)] lg:items-start lg:gap-10 lg:p-10">
               <div className="flex justify-center lg:justify-start">
@@ -553,26 +569,38 @@ export default function HomePage() {
       </section>
 
       {/* Vision & Mission */}
-      <section id="vision" className="border-b border-slate-200/60 bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="relative h-44 w-full sm:h-52">
-                <Image src={VISION_PHOTOS[0]} alt="Students in a lecture at MISH" fill className="object-cover" sizes="50vw" />
+      <section id="vision" className="border-b border-slate-200/60 bg-white py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="grid gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:rounded-2xl">
+              <div className="relative h-40 w-full sm:h-52">
+                <Image
+                  src={VISION_PHOTOS[0]}
+                  alt="Students in a lecture at MISH"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
               </div>
-              <div className="p-7">
-                <h3 className="landing-serif text-2xl font-bold text-[#5c2226]">{copy.visionTitle}</h3>
+              <div className="p-5 sm:p-7">
+                <h3 className="landing-serif text-xl font-bold text-[#5c2226] sm:text-2xl">{copy.visionTitle}</h3>
                 <p className="mt-3 text-slate-600 leading-relaxed">
                   {copy.visionBody}
                 </p>
               </div>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="relative h-44 w-full sm:h-52">
-                <Image src={VISION_PHOTOS[1]} alt="Students attending a seminar at MISH" fill className="object-cover" sizes="50vw" />
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:rounded-2xl">
+              <div className="relative h-40 w-full sm:h-52">
+                <Image
+                  src={VISION_PHOTOS[1]}
+                  alt="Students attending a seminar at MISH"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
               </div>
-              <div className="p-7">
-                <h3 className="landing-serif text-2xl font-bold text-[#5c2226]">{copy.missionTitle}</h3>
+              <div className="p-5 sm:p-7">
+                <h3 className="landing-serif text-xl font-bold text-[#5c2226] sm:text-2xl">{copy.missionTitle}</h3>
                 <p className="mt-3 text-slate-600 leading-relaxed">
                   {copy.missionBody}
                 </p>
@@ -583,10 +611,10 @@ export default function HomePage() {
       </section>
 
       {/* Programs */}
-      <section id="programs" className="border-b border-slate-200/60 bg-white py-16 sm:py-20" aria-labelledby="programs-heading">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="programs" className="border-b border-slate-200/60 bg-white py-12 sm:py-16 md:py-20" aria-labelledby="programs-heading">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div>
-            <h2 id="programs-heading" className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+            <h2 id="programs-heading" className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
               {copy.programsHeading}
             </h2>
             <p className="mt-3 max-w-2xl text-slate-600">
@@ -594,7 +622,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {[
               {
                 title: "BASLP",
@@ -622,7 +650,13 @@ export default function HomePage() {
                   className="relative block h-40 w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c2d32] focus-visible:ring-offset-2"
                   aria-label={`Open photo for ${p.title}`}
                 >
-                  <Image src={p.photo} alt="" fill className="object-cover transition duration-300 group-hover:scale-105" sizes="33vw" />
+                  <Image
+                    src={p.photo}
+                    alt=""
+                    fill
+                    className="object-cover transition duration-300 group-hover:scale-105"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
                   <span className="sr-only">{copy.openGallery}</span>
                 </button>
                 <div className="p-6">
@@ -649,14 +683,14 @@ export default function HomePage() {
       </section>
 
       {/* Departments */}
-      <section id="departments" className="border-b border-slate-200/60 bg-[#fdf8f0] py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+      <section id="departments" className="border-b border-slate-200/60 bg-[#fdf8f0] py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <h2 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
             {copy.deptHeading}
           </h2>
           <p className="mt-3 max-w-2xl text-slate-600">{copy.deptLead}</p>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
             {[copy.dept1, copy.dept2, copy.dept3, copy.dept4].map((name, i) => (
               <div key={name} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <button
@@ -665,7 +699,13 @@ export default function HomePage() {
                   className="relative block h-36 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c2d32] focus-visible:ring-offset-2"
                   aria-label={`Open photo for ${name}`}
                 >
-                  <Image src={DEPT_PHOTOS[i]!} alt="" fill className="object-cover" sizes="25vw" />
+                  <Image
+                    src={DEPT_PHOTOS[i]!}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
                 </button>
                 <div className="p-5">
                   <div className="text-base font-semibold text-[#5c2226]">{name}</div>
@@ -677,9 +717,9 @@ export default function HomePage() {
       </section>
 
       {/* Core faculty */}
-      <section id="faculty" className="border-b border-slate-200/60 bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+      <section id="faculty" className="border-b border-slate-200/60 bg-white py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <h2 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
             {copy.facultyHeading}
           </h2>
           <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-600">{copy.facultyLead}</p>
@@ -703,7 +743,7 @@ export default function HomePage() {
                     role="group"
                     aria-label={`${copy.facultyPageOf} ${pageIndex + 1} / ${facultyPageCount}`}
                   >
-                    <div className="mx-auto grid h-full w-full max-w-7xl grid-cols-3 items-stretch gap-2 sm:gap-3 lg:gap-4">
+                    <div className="mx-auto grid h-full w-full max-w-7xl grid-cols-1 items-stretch gap-3 sm:grid-cols-3 sm:gap-2 md:gap-3 lg:gap-4">
                       {page.map((member) => {
                         const dash = copy.facultyEmpty;
                         const show = (v: string) => (v.trim() ? v : dash);
@@ -809,11 +849,11 @@ export default function HomePage() {
       </section>
 
       {/* Facilities */}
-      <section id="campus" className="border-b border-slate-200/60 bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
-            <div>
-              <h2 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+      <section id="campus" className="border-b border-slate-200/60 bg-white py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="grid gap-8 sm:gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
+            <div className="min-w-0">
+              <h2 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
                 {copy.facilitiesHeading}
               </h2>
               <p className="mt-4 text-slate-600 leading-relaxed">
@@ -827,16 +867,22 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-4">
               {FACILITY_PHOTOS.map((src, idx) => (
                 <button
                   key={src}
                   type="button"
                   onClick={() => setLightbox(GALLERY.indexOf(src))}
-                  className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-md ring-1 ring-slate-200/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c2d32] focus-visible:ring-offset-2"
+                  className="relative aspect-[4/3] overflow-hidden rounded-lg shadow-md ring-1 ring-slate-200/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c2d32] focus-visible:ring-offset-2 sm:rounded-xl"
                   aria-label={`${copy.openFacilitiesPhoto} ${idx + 1}`}
                 >
-                  <Image src={src} alt={copy.facilitiesImgAlt} fill className="object-cover" sizes="50vw" />
+                  <Image
+                    src={src}
+                    alt={copy.facilitiesImgAlt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 50vw, 25vw"
+                  />
                 </button>
               ))}
             </div>
@@ -845,17 +891,17 @@ export default function HomePage() {
       </section>
 
       {/* Campus highlights + Latest news: title row, then equal-height cards */}
-      <section id="events" className="border-b border-slate-200/60 bg-[#fdf8f0] py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+      <section id="events" className="border-b border-slate-200/60 bg-[#fdf8f0] py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-5 sm:gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
             <header className="min-w-0 lg:max-w-[58%] lg:flex-1">
-              <h2 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+              <h2 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
                 {copy.eventsHeading}
               </h2>
               <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-600">{copy.eventsLead}</p>
             </header>
-            <header className="min-w-0 border-t border-slate-200/80 pt-6 lg:w-[38%] lg:max-w-md lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
-              <h3 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+            <header className="min-w-0 border-t border-slate-200/80 pt-5 sm:pt-6 lg:w-[38%] lg:max-w-md lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+              <h3 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
                 {copy.latestNewsHeading}
               </h3>
               <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-600">{copy.latestNewsHint}</p>
@@ -992,9 +1038,9 @@ export default function HomePage() {
       </section>
 
       {/* Full gallery — every provided photo */}
-      <section id="gallery" className="border-b border-slate-200/60 bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+      <section id="gallery" className="border-b border-slate-200/60 bg-white py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <h2 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
             {copy.galleryHeading}
           </h2>
           <p className="mt-3 max-w-2xl text-slate-600">
@@ -1074,12 +1120,12 @@ export default function HomePage() {
       </section>
 
       {/* Contact */}
-      <section id="contact" className="bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-slate-200 bg-[#fdf8f0] p-6 shadow-sm sm:p-8">
-            <div className="grid gap-8 lg:grid-cols-2 lg:gap-10 lg:items-start">
-              <div>
-                <h2 className="landing-serif mish-heading-underline text-3xl font-bold text-[#5c2226] sm:text-4xl">
+      <section id="contact" className="bg-white py-12 sm:py-16 md:py-20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-slate-200 bg-[#fdf8f0] p-4 shadow-sm sm:rounded-3xl sm:p-8">
+            <div className="grid min-w-0 gap-8 lg:grid-cols-2 lg:gap-10 lg:items-start">
+              <div className="min-w-0">
+                <h2 className="landing-serif mish-heading-underline text-2xl font-bold text-[#5c2226] sm:text-4xl">
                   {copy.contactHeading}
                 </h2>
                 <p className="mt-3 text-slate-600">
@@ -1114,7 +1160,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/60 sm:p-5 lg:justify-self-end">
+              <div className="w-full min-w-0 max-w-md rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/60 sm:p-5 lg:justify-self-end">
                 <h3 className="text-base font-bold text-[#5c2226]">{copy.sendMessageHeading}</h3>
                 <p className="mt-0.5 text-xs text-slate-600 sm:text-sm">
                   {copy.sendMessageLead}
@@ -1224,7 +1270,7 @@ export default function HomePage() {
 
       {lightbox !== null && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-8"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:p-8"
           role="dialog"
           aria-modal="true"
           aria-label={copy.photoPreview}
@@ -1232,7 +1278,7 @@ export default function HomePage() {
         >
           <button
             type="button"
-            className="absolute right-3 top-3 z-[102] rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
+            className="absolute right-2 top-[max(0.5rem,env(safe-area-inset-top))] z-[102] inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/15 p-2 text-white hover:bg-white/25 sm:right-3 sm:top-3"
             onClick={(e) => {
               e.stopPropagation();
               setLightbox(null);
@@ -1243,7 +1289,7 @@ export default function HomePage() {
           </button>
           <button
             type="button"
-            className="absolute left-1 top-1/2 z-[102] -translate-y-1/2 rounded-full bg-white/15 p-2 text-white hover:bg-white/25 sm:left-3"
+            className="absolute left-1 top-1/2 z-[102] inline-flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-full bg-white/15 p-2 text-white hover:bg-white/25 sm:left-3"
             onClick={(e) => {
               e.stopPropagation();
               setLightbox((i) => (i === null ? i : (i - 1 + GALLERY.length) % GALLERY.length));
@@ -1254,7 +1300,7 @@ export default function HomePage() {
           </button>
           <button
             type="button"
-            className="absolute right-1 top-1/2 z-[102] -translate-y-1/2 rounded-full bg-white/15 p-2 text-white hover:bg-white/25 sm:right-3"
+            className="absolute right-1 top-1/2 z-[102] inline-flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-full bg-white/15 p-2 text-white hover:bg-white/25 sm:right-3"
             onClick={(e) => {
               e.stopPropagation();
               setLightbox((i) => (i === null ? i : (i + 1) % GALLERY.length));
@@ -1264,7 +1310,7 @@ export default function HomePage() {
             <ChevronRight className="h-7 w-7 sm:h-8 sm:w-8" />
           </button>
           <div
-            className="relative h-[min(85vh,920px)] w-full max-w-5xl"
+            className="relative h-[min(72vh,560px)] w-full max-w-5xl sm:h-[min(85vh,920px)]"
             onClick={(e) => e.stopPropagation()}
           >
             <Image
@@ -1281,7 +1327,7 @@ export default function HomePage() {
 
       {newsModal !== null && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 sm:p-6"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby="news-modal-title"

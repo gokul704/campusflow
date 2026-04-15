@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Lora } from "next/font/google";
 
 const lora = Lora({
@@ -11,6 +11,12 @@ const lora = Lora({
 export const metadata: Metadata = {
   title: "CampusFlow | MISH",
   description: "CampusFlow portal for MAA Institute of Speech and Hearing (MISH)",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

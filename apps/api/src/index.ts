@@ -30,14 +30,42 @@ import sectionsRoutes from "./modules/sections/sections.routes";
 const app = express();
 const PORT = process.env.PORT ?? 4000;
 
+/** Production CORS: *.campusflow.io, *.onrender.com, *.vercel.app, localhost, and CORS_ORIGINS (comma-separated full origins). */
+function productionCorsAllowed(origin: string | undefined): boolean {
+  if (!origin) return true;
+  let hostname: string;
+  try {
+    hostname = new URL(origin).hostname;
+  } catch {
+    return false;
+  }
+  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+  if (/\.campusflow\.io$/i.test(hostname)) return true;
+  if (hostname.endsWith(".onrender.com")) return true;
+  if (hostname.endsWith(".vercel.app")) return true;
+  const extras =
+    process.env.CORS_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  return extras.includes(origin);
+}
+
 // ─── Global Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({
-  origin: process.env.NODE_ENV === "production"
-    ? /\.campusflow\.io$/
-    : true,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (process.env.NODE_ENV !== "production") {
+        callback(null, true);
+        return;
+      }
+      if (productionCorsAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(morgan("dev"));
 app.use(express.json());
 app.use("/api", apiLimiter);

@@ -41,15 +41,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md">
+    <div className="flex min-h-screen min-w-0 items-center justify-center bg-gray-50 px-4 py-8">
+      <div className="w-full min-w-0 max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-blue-600">CampusFlow</h1>
           <p className="text-gray-500 mt-1 text-sm">Sign in to your college portal</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-8">
+        <div className="rounded-xl bg-white p-5 shadow sm:p-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Welcome back</h2>
 
           {error && (
