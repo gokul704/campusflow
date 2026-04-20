@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middleware/authenticate";
+import { ASSIGNMENT_SUBMIT_ROLES, COURSE_STAFF_ROLES } from "../../middleware/roleGroups";
 import {
   listHandler,
   getOneHandler,
@@ -14,9 +15,9 @@ const router = Router();
 router.use(authenticate);
 router.get("/", listHandler);
 router.get("/:id", getOneHandler);
-router.post("/", authorize("ADMIN", "FACULTY"), createHandler);
-router.put("/:id", authorize("ADMIN", "FACULTY"), updateHandler);
-router.delete("/:id", authorize("ADMIN", "FACULTY"), deleteHandler);
-router.post("/:id/submit", authorize("STUDENT"), submitHandler);
-router.post("/:id/grade", authorize("ADMIN", "FACULTY"), gradeHandler);
+router.post("/", authorize(...COURSE_STAFF_ROLES), createHandler);
+router.put("/:id", authorize(...COURSE_STAFF_ROLES), updateHandler);
+router.delete("/:id", authorize(...COURSE_STAFF_ROLES), deleteHandler);
+router.post("/:id/submit", authorize(...ASSIGNMENT_SUBMIT_ROLES), submitHandler);
+router.post("/:id/grade", authorize(...COURSE_STAFF_ROLES), gradeHandler);
 export default router;

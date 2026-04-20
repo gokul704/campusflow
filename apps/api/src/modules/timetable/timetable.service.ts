@@ -1,4 +1,5 @@
 import { prisma } from "@campusflow/db";
+import { resolveBatchCourseId } from "../../lib/bulkImportResolvers";
 
 const timetableInclude = {
   batchCourse: {
@@ -111,4 +112,81 @@ export async function deleteSlot(tenantId: string, id: string) {
   const record = await prisma.timetable.findFirst({ where: { id, tenantId } });
   if (!record) throw new Error("Timetable slot not found");
   return prisma.timetable.delete({ where: { id } });
+}
+
+/** Schema uses 0=Monday … 5=Saturday. */
+export function parseDayOfWeekInput(v: unknown): number {
+  if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 5) return v;
+  const s = String(v ?? "").trim().toLowerCase();
+  if (!s) throw new Error("dayOfWeek is required");
+  const map: Record<string, number> = {
+    "0": 0,
+    mon: 0,
+    monday: 0,
+    "1": 1,
+    tue: 1,
+    tues: 1,
+    tuesday: 1,
+    "2": 2,
+    wed: 2,
+    weds: 2,
+    wednesday: 2,
+    "3": 3,
+    thu: 3,
+    thur: 3,
+    thurs: 3,
+    thursday: 3,
+    "4": 4,
+    fri: 4,
+    friday: 4,
+    "5": 5,
+    sat: 5,
+    saturday: 5,
+  };
+  if (map[s] !== undefined) return map[s];
+  const n = parseInt(s, 10);
+  if (!Number.isNaN(n) && n >= 0 && n <= 5) return n;
+  throw new Error(`Invalid day of week: ${String(v)} (use 0–5 with 0=Monday, or Monday–Saturday)`);
+}
+
+export async function bulkCreateTimetableSlots(
+  tenantId: string,
+  rows: Array<{
+    batchCourseId?: string | null;
+    batchId?: string | null;
+    sectionId?: string | null;
+    batchName?: string | null;
+    sectionName?: string | null;
+    courseCode?: string | null;
+    courseId?: string | null;
+    semester?: number | null;
+    dayOfWeek: unknown;
+    startTime: string;
+    endTime: string;
+    room?: string | null;
+  }>
+) {
+  const failed: { index: number; error: string }[] = [];
+  let created = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    try {
+      const batchCourseId = await resolveBatchCourseId(tenantId, row);
+      const dayOfWeek = parseDayOfWeekInput(row.dayOfWeek);
+      const startTime = row.startTime.trim();
+      const endTime = row.endTime.trim();
+      if (!startTime || !endTime) throw new Error("startTime and endTime are required");
+      await createSlot(tenantId, {
+        batchCourseId,
+        dayOfWeek,
+        startTime,
+        endTime,
+        room: row.room?.trim() || undefined,
+      });
+      created++;
+    } catch (e) {
+      failed.push({ index: i, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+  return { created, failed };
 }

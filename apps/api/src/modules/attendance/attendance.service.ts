@@ -1,4 +1,5 @@
 import { prisma, AttendanceStatus } from "@campusflow/db";
+import { resolveBatchCourseId } from "../../lib/bulkImportResolvers";
 
 export async function getAttendance(
   tenantId: string,
@@ -121,4 +122,75 @@ export async function deleteAttendance(tenantId: string, id: string) {
   const record = await prisma.attendance.findFirst({ where: { id, tenantId } });
   if (!record) throw new Error("Attendance record not found");
   return prisma.attendance.delete({ where: { id } });
+}
+
+function parseAttendanceStatus(raw: string): AttendanceStatus {
+  const u = raw.trim().toUpperCase();
+  if (u === "PRESENT" || u === "ABSENT" || u === "LATE" || u === "EXCUSED") return u;
+  throw new Error(`Invalid status: ${raw} (use PRESENT, ABSENT, LATE, or EXCUSED)`);
+}
+
+export async function bulkImportAttendanceRows(
+  tenantId: string,
+  rows: Array<{
+    batchCourseId?: string | null;
+    batchId?: string | null;
+    sectionId?: string | null;
+    batchName?: string | null;
+    sectionName?: string | null;
+    courseCode?: string | null;
+    courseId?: string | null;
+    semester?: number | null;
+    date: string;
+    rollNumber?: string | null;
+    studentEmail?: string | null;
+    status: string;
+  }>
+) {
+  const failed: { index: number; error: string }[] = [];
+  let created = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    try {
+      const batchCourseId = await resolveBatchCourseId(tenantId, row);
+      const dateObj = new Date(row.date);
+      if (Number.isNaN(dateObj.getTime())) throw new Error("Invalid date");
+      const status = parseAttendanceStatus(row.status);
+
+      const roll = row.rollNumber?.trim();
+      const email = row.studentEmail?.trim().toLowerCase();
+      let studentId: string | null = null;
+      if (roll) {
+        const s = await prisma.student.findUnique({
+          where: { tenantId_rollNumber: { tenantId, rollNumber: roll } },
+          select: { id: true },
+        });
+        studentId = s?.id ?? null;
+      }
+      if (!studentId && email) {
+        const s = await prisma.student.findFirst({
+          where: { tenantId, user: { email: { equals: email, mode: "insensitive" } } },
+          select: { id: true },
+        });
+        studentId = s?.id ?? null;
+      }
+      if (!studentId) throw new Error("Student not found (use roll number or student email)");
+
+      await prisma.attendance.upsert({
+        where: {
+          studentId_batchCourseId_date: {
+            studentId,
+            batchCourseId,
+            date: dateObj,
+          },
+        },
+        create: { tenantId, studentId, batchCourseId, date: dateObj, status },
+        update: { status },
+      });
+      created++;
+    } catch (e) {
+      failed.push({ index: i, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+  return { created, failed };
 }

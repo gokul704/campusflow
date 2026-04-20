@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { useSearchParams } from "next/navigation";
+import { authFetch, formatApiError } from "@/lib/api";
+import {
+  alertBulkImportSummary,
+  downloadExcelTemplate,
+  excelCell,
+  namesFromFacultyDisplayCell,
+  readExcelFirstSheet,
+} from "@/lib/excelImport";
+import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
 interface FacultyMember {
@@ -39,7 +48,46 @@ function formatDob(iso: string | null | undefined) {
 interface Department { id: string; name: string; code: string; }
 interface UserOption { id: string; firstName: string; lastName: string; email: string; }
 
+type FacultyImportRow = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  designation: string;
+  phone?: string;
+  qualification?: string;
+  departmentCode?: string;
+  departmentName?: string;
+  departmentId?: string;
+  password?: string;
+};
+
+function facultyRowFromExcel(r: Record<string, unknown>): FacultyImportRow | null {
+  const email = excelCell(r, "email");
+  if (!email) return null;
+  let firstName = excelCell(r, "firstname", "first name", "first_name");
+  let lastName = excelCell(r, "lastname", "last name", "last_name");
+  const facultyCell = excelCell(r, "faculty", "faculty name", "teacher", "teacher name", "full name", "staff name");
+  if ((!firstName || !lastName) && facultyCell) {
+    const sp = namesFromFacultyDisplayCell(facultyCell);
+    if (!firstName) firstName = sp.firstName;
+    if (!lastName) lastName = sp.lastName;
+  }
+  return {
+    email,
+    firstName,
+    lastName,
+    designation: excelCell(r, "designation", "title", "role"),
+    phone: excelCell(r, "phone", "mobile") || undefined,
+    qualification: excelCell(r, "qualification", "degree") || undefined,
+    departmentCode: excelCell(r, "departmentcode", "department code", "dept code") || undefined,
+    departmentName: excelCell(r, "departmentname", "department name", "dept name") || undefined,
+    departmentId: excelCell(r, "departmentid", "department id") || undefined,
+    password: excelCell(r, "password") || undefined,
+  };
+}
+
 export default function FacultyPage() {
+  const searchParams = useSearchParams();
   const [faculty, setFaculty] = useState<FacultyMember[]>([]);
   const [total, setTotal] = useState(0);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -52,6 +100,13 @@ export default function FacultyPage() {
   const [form, setForm] = useState({ userId: "", departmentId: "", designation: "", qualification: "" });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
+
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<FacultyImportRow[]>([]);
+  const [importParseError, setImportParseError] = useState("");
+  const [importSubmitError, setImportSubmitError] = useState("");
+  const [importDefaultPassword, setImportDefaultPassword] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
 
   const [viewFaculty, setViewFaculty] = useState<FacultyDetail | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
@@ -98,6 +153,11 @@ export default function FacultyPage() {
     authFetch("/api/departments").then(r => r.json()).then(setDepartments);
   }, []);
 
+  useEffect(() => {
+    const s = searchParams.get("search");
+    if (s) setSearch(s);
+  }, [searchParams]);
+
   useEffect(() => { fetchFaculty(); }, [page, filterDept]);
 
   useEffect(() => {
@@ -106,7 +166,7 @@ export default function FacultyPage() {
   }, [search]);
 
   async function openForm() {
-    const res = await authFetch("/api/users?role=FACULTY&limit=100");
+    const res = await authFetch("/api/users?role=OPERATIONS_LECTURER&limit=100");
     const data = await res.json();
     setUsers(data.users ?? []);
     setShowForm(true);
@@ -127,14 +187,110 @@ export default function FacultyPage() {
     finally { setFormLoading(false); }
   }
 
+  function openImport() {
+    setImportRows([]);
+    setImportParseError("");
+    setImportSubmitError("");
+    setImportDefaultPassword("");
+    setShowImport(true);
+  }
+
+  async function handleExcelFile(file: File) {
+    setImportParseError("");
+    try {
+      const raw = await readExcelFirstSheet(file);
+      const rows: FacultyImportRow[] = [];
+      for (const row of raw) {
+        const parsed = facultyRowFromExcel(row);
+        if (!parsed) continue;
+        if (!parsed.firstName || !parsed.lastName || !parsed.designation) {
+          setImportParseError(
+            "Each row needs Email, Designation, and either (First + Last name) or a Faculty / Teacher column (e.g. timetable-style names)."
+          );
+          return;
+        }
+        if (!parsed.departmentId && !parsed.departmentCode && !parsed.departmentName) {
+          setImportParseError(`Add department (code, name, or id) for row with email ${parsed.email}.`);
+          return;
+        }
+        rows.push(parsed);
+      }
+      if (rows.length === 0) {
+        setImportParseError("No data rows found (need at least Email per row).");
+        return;
+      }
+      setImportRows(rows);
+    } catch {
+      setImportParseError("Could not read the Excel file.");
+    }
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setImportSubmitError("");
+    if (importRows.length === 0) {
+      setImportSubmitError("Parse an Excel file first.");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const body: { defaultPassword?: string; rows: FacultyImportRow[] } = { rows: importRows };
+      if (importDefaultPassword.trim().length >= 8) body.defaultPassword = importDefaultPassword.trim();
+      const res = await authFetch("/api/faculty/bulk", { method: "POST", body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportSubmitError(formatApiError(data));
+        return;
+      }
+      setShowImport(false);
+      void fetchFaculty();
+      const failed = (data.failed as { index: number; email?: string; error: string }[] | undefined) ?? [];
+      alertBulkImportSummary(data.created ?? 0, failed);
+    } catch {
+      setImportSubmitError("Request failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Faculty</h1>
-        <button type="button" onClick={openForm} className={dash.btnPrimary}>
-          + Add Faculty Profile
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              downloadExcelTemplate("faculty-import-template.xlsx", "Faculty", [
+                "Email",
+                "First Name",
+                "Last Name",
+                "Faculty",
+                "Designation",
+                "Department Code",
+                "Qualification",
+                "Phone",
+                "Password",
+              ])
+            }
+            className={dash.btnSecondary}
+          >
+            Download Excel template
+          </button>
+          <button type="button" onClick={openImport} className={dash.btnSecondary}>
+            Import Excel
+          </button>
+          <button type="button" onClick={openForm} className={dash.btnPrimary}>
+            + Add Faculty Profile
+          </button>
+        </div>
       </div>
+
+      <p className="mb-4 max-w-3xl text-xs text-gray-500 dark:text-gray-400">
+        Excel import creates the login and faculty profile together. Leave password blank to use{" "}
+        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">DEFAULT_NEW_USER_PASSWORD</code> from the API .env (min 8
+        characters), or set a default below.
+      </p>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input
@@ -322,6 +478,53 @@ export default function FacultyPage() {
                   {formLoading ? "Saving..." : "Save"}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showImport && (
+        <div className={dash.modalOverlay}>
+          <div className={`${dash.modalPanel} max-w-lg`}>
+            <h2 className={`${dash.sectionTitle} mb-4`}>Import faculty</h2>
+            <BulkImportOrderHint className="mb-3" />
+            <p className={`mb-3 text-xs ${dash.cellMuted}`}>
+              Each row still needs an institutional <strong>Email</strong> (login). If the sheet only has timetable-style names, put them
+              in the <strong>Faculty</strong> column — the first name before a co-teacher (<code className="rounded bg-gray-100 px-1 dark:bg-gray-800">/</code>) is used
+              and split into first/last name when First/Last are blank.
+            </p>
+            {importParseError && <div className={dash.errorBanner}>{importParseError}</div>}
+            {importSubmitError && <div className={dash.errorBanner}>{importSubmitError}</div>}
+            <div className="mb-3">
+              <label className={dash.label}>Default password (optional)</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={importDefaultPassword}
+                onChange={(e) => setImportDefaultPassword(e.target.value)}
+                placeholder="Min 8 chars if row has no Password"
+                className={dash.input}
+              />
+            </div>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="mb-3 block w-full text-sm"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleExcelFile(f);
+              }}
+            />
+            {importRows.length > 0 && (
+              <p className={`mb-3 text-sm ${dash.cellMuted}`}>{importRows.length} row(s) ready to import.</p>
+            )}
+            <form onSubmit={handleBulkSubmit} className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowImport(false)} className={`flex-1 ${dash.btnSecondary}`}>
+                Cancel
+              </button>
+              <button type="submit" disabled={importLoading || importRows.length === 0} className={`flex-1 ${dash.btnPrimary}`}>
+                {importLoading ? "Importing…" : "Import"}
+              </button>
             </form>
           </div>
         </div>

@@ -33,7 +33,20 @@ export default function LoginPage() {
       // Store token in cookie (7 days)
       document.cookie = `cf_token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Strict`;
       router.push("/dashboard");
-    } catch {
+    } catch (err) {
+      if (err instanceof Error) {
+        const m = err.message;
+        const looksLikeNetwork =
+          m === "Failed to fetch" ||
+          m === "Load failed" ||
+          /networkerror when attempting to fetch/i.test(m);
+        setError(
+          looksLikeNetwork
+            ? "Could not reach the API. Start the API (e.g. port 4000), set NEXT_PUBLIC_API_URL in apps/web/.env.local, and restart Next.js. If this page is HTTPS, the API must be HTTPS too (browsers block mixed content)."
+            : m
+        );
+        return;
+      }
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -45,7 +58,7 @@ export default function LoginPage() {
       <div className="w-full min-w-0 max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-600">CampusFlow</h1>
+          <h1 className="text-3xl font-bold text-blue-600">MAA Education portal</h1>
           <p className="text-gray-500 mt-1 text-sm">Sign in to your college portal</p>
         </div>
 
@@ -105,7 +118,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Powered by CampusFlow &copy; {new Date().getFullYear()}
+          MAA Education portal &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>

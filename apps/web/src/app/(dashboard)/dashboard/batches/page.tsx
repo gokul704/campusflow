@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { authFetch, formatApiError } from "@/lib/api";
+import {
+  alertBulkImportSummary,
+  downloadExcelTemplate,
+  excelCell,
+  readExcelFirstSheet,
+} from "@/lib/excelImport";
+import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
 interface Batch {
@@ -13,6 +20,20 @@ interface Batch {
   _count: { students: number };
 }
 
+type BatchImportRow = { name: string; startYear: number; endYear: number };
+
+function batchRowFromExcel(r: Record<string, unknown>): BatchImportRow | null {
+  let name = excelCell(r, "name", "batch name", "batch");
+  const syRaw = excelCell(r, "startyear", "start year", "start_year", "from");
+  const eyRaw = excelCell(r, "endyear", "end year", "end_year", "to");
+  if (!name && !syRaw && !eyRaw) return null;
+  const startYear = Number(syRaw);
+  const endYear = Number(eyRaw);
+  if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) return null;
+  if (!name) name = `${startYear}-${endYear}`;
+  return { name, startYear, endYear };
+}
+
 export default function BatchesPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +41,12 @@ export default function BatchesPage() {
   const [form, setForm] = useState({ name: "", startYear: "", endYear: "" });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
+
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<BatchImportRow[]>([]);
+  const [importParseError, setImportParseError] = useState("");
+  const [importSubmitError, setImportSubmitError] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
 
   async function fetchBatches() {
     setLoading(true);
@@ -81,17 +108,82 @@ export default function BatchesPage() {
     fetchBatches();
   }
 
+  function openImport() {
+    setImportRows([]);
+    setImportParseError("");
+    setImportSubmitError("");
+    setShowImport(true);
+  }
+
+  async function handleExcelFile(file: File) {
+    setImportParseError("");
+    try {
+      const raw = await readExcelFirstSheet(file);
+      const rows: BatchImportRow[] = [];
+      for (const row of raw) {
+        const parsed = batchRowFromExcel(row);
+        if (!parsed) continue;
+        rows.push(parsed);
+      }
+      if (rows.length === 0) {
+        setImportParseError('No valid rows. Use columns "Name" (optional if years set), "Start Year", "End Year".');
+        return;
+      }
+      setImportRows(rows);
+    } catch {
+      setImportParseError("Could not read the Excel file.");
+    }
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setImportSubmitError("");
+    if (importRows.length === 0) {
+      setImportSubmitError("Parse an Excel file first.");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const res = await authFetch("/api/batches/bulk", {
+        method: "POST",
+        body: JSON.stringify({ rows: importRows }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportSubmitError(formatApiError(data));
+        return;
+      }
+      setShowImport(false);
+      void fetchBatches();
+      alertBulkImportSummary(data.created ?? 0, data.failed ?? []);
+    } catch {
+      setImportSubmitError("Request failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Batches</h1>
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition hover:bg-blue-700"
-        >
-          + New Batch
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              downloadExcelTemplate("batches-import-template.xlsx", "Batches", ["Name", "Start Year", "End Year"])
+            }
+            className={dash.btnSecondary}
+          >
+            Download Excel template
+          </button>
+          <button type="button" onClick={openImport} className={dash.btnSecondary}>
+            Import Excel
+          </button>
+          <button type="button" onClick={() => setShowForm(true)} className={dash.btnPrimary}>
+            + New Batch
+          </button>
+        </div>
       </div>
 
       <div className={dash.tableWrap}>
@@ -238,6 +330,41 @@ export default function BatchesPage() {
                   {formLoading ? "Creating..." : "Create"}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showImport && (
+        <div className={dash.modalOverlay}>
+          <div className={`${dash.modalPanel} max-w-lg`}>
+            <h2 className={`${dash.sectionTitle} mb-4`}>Import batches</h2>
+            <BulkImportOrderHint className="mb-3" />
+            <p className={`mb-3 text-xs ${dash.cellMuted}`}>
+              Columns: <strong>Name</strong> (optional — defaults to Start–End years), <strong>Start Year</strong>,{" "}
+              <strong>End Year</strong>.
+            </p>
+            {importParseError && <div className={dash.errorBanner}>{importParseError}</div>}
+            {importSubmitError && <div className={dash.errorBanner}>{importSubmitError}</div>}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="mb-3 block w-full text-sm"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleExcelFile(f);
+              }}
+            />
+            {importRows.length > 0 && (
+              <p className={`mb-3 text-sm ${dash.cellMuted}`}>{importRows.length} row(s) ready to import.</p>
+            )}
+            <form onSubmit={handleBulkSubmit} className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowImport(false)} className={`flex-1 ${dash.btnSecondary}`}>
+                Cancel
+              </button>
+              <button type="submit" disabled={importLoading || importRows.length === 0} className={`flex-1 ${dash.btnPrimary}`}>
+                {importLoading ? "Importing…" : "Import"}
+              </button>
             </form>
           </div>
         </div>

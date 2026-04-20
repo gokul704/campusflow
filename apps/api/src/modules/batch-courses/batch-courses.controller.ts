@@ -14,6 +14,35 @@ const updateSchema = z.object({
   facultyId: z.string().nullable().optional(),
 });
 
+const bulkBatchCourseRow = z.object({
+  batchCourseId: z.string().optional().nullable(),
+  batchId: z.string().optional().nullable(),
+  sectionId: z.string().optional().nullable(),
+  batchName: z.string().optional().nullable(),
+  sectionName: z.string().optional().nullable(),
+  courseCode: z.string().optional().nullable(),
+  courseId: z.string().optional().nullable(),
+  semester: z.coerce.number().int().min(1).max(20),
+  facultyId: z.string().optional().nullable(),
+  facultyEmail: z.string().optional().nullable(),
+});
+const bulkBatchCoursesSchema = z.object({
+  rows: z.array(bulkBatchCourseRow).min(1).max(500),
+});
+
+export async function bulkCreateHandler(req: Request, res: Response): Promise<void> {
+  const r = bulkBatchCoursesSchema.safeParse(req.body);
+  if (!r.success) {
+    res.status(400).json({ error: r.error.flatten() });
+    return;
+  }
+  try {
+    res.status(201).json(await svc.bulkCreateBatchCourses(req.tenant.id, r.data.rows));
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
 export async function listHandler(req: Request, res: Response): Promise<void> {
   try {
     const batchId = req.query.batchId as string | undefined;

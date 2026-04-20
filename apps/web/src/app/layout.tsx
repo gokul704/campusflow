@@ -9,8 +9,8 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "CampusFlow | MISH",
-  description: "CampusFlow portal for MAA Institute of Speech and Hearing (MISH)",
+  title: "MAA Education portal | MISH",
+  description: "MAA Education portal for MAA Institute of Speech and Hearing (MISH)",
 };
 
 export const viewport: Viewport = {

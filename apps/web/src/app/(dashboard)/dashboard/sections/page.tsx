@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/api";
+import { BulkImportSectionsCallout } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
 interface Section {
@@ -82,6 +83,8 @@ export default function SectionsPage() {
           + Add Section
         </button>
       </div>
+
+      <BulkImportSectionsCallout />
 
       <div className="mb-4 flex gap-3">
         <select

@@ -1,6 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import { Role } from "@campusflow/db";
 import * as authService from "./auth.service";
+import { getEffectivePermissions } from "../../lib/tenantAccessMatrix";
+
+const profilePatchSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  phone: z.string().optional().nullable(),
+});
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -84,12 +92,12 @@ export async function changePasswordHandler(req: Request, res: Response): Promis
   }
 
   try {
-    await authService.changePassword(
+    const out = await authService.changePassword(
       req.user!.id,
       result.data.currentPassword,
       result.data.newPassword
     );
-    res.json({ message: "Password changed successfully." });
+    res.json(out);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Change failed";
     res.status(400).json({ error: message });
@@ -97,5 +105,43 @@ export async function changePasswordHandler(req: Request, res: Response): Promis
 }
 
 export async function meHandler(req: Request, res: Response): Promise<void> {
-  res.json({ user: req.user });
+  try {
+    const profile = await authService.getMeProfile(req.user!.id, req.tenant.id);
+    const portal = await authService.getPortalAccessState(req.user!.id, req.tenant.id);
+    res.json({
+      user: req.user,
+      profile,
+      portalAccessRestricted: portal.portalAccessRestricted,
+      portalRestrictionReason: portal.portalRestrictionReason,
+      portalRestrictionSource: portal.portalRestrictionSource,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed";
+    res.status(400).json({ error: message });
+  }
+}
+
+export async function permissionsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const modules = getEffectivePermissions(req.user!.role as Role, req.tenant.accessMatrix);
+    res.json({ modules });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed";
+    res.status(400).json({ error: message });
+  }
+}
+
+export async function patchProfileHandler(req: Request, res: Response): Promise<void> {
+  const result = profilePatchSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.flatten() });
+    return;
+  }
+  try {
+    const updated = await authService.updateOwnProfile(req.user!.id, req.tenant.id, result.data);
+    res.json(updated);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Update failed";
+    res.status(400).json({ error: message });
+  }
 }

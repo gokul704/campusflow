@@ -7,6 +7,8 @@ export default function LogoutButton() {
 
   function handleLogout() {
     document.cookie = "cf_token=; path=/; max-age=0";
+    document.documentElement.classList.remove("dark");
+    localStorage.setItem("cf_theme", "light");
     router.push("/login");
   }
 

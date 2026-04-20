@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import { PaymentStatus, Role } from "@campusflow/db";
 import * as svc from "./fees.service";
-import { PaymentStatus } from "@campusflow/db";
 
 const feeStructureSchema = z.object({
   name: z.string().min(1),
   amount: z.number().positive(),
   dueDate: z.string(),
   isRecurring: z.boolean().optional(),
+  isAdmissionFee: z.boolean().optional(),
 });
 
 const feeStructureUpdateSchema = z.object({
@@ -15,12 +16,18 @@ const feeStructureUpdateSchema = z.object({
   amount: z.number().positive().optional(),
   dueDate: z.string().optional(),
   isRecurring: z.boolean().optional(),
+  isAdmissionFee: z.boolean().optional(),
 });
 
-const paymentCreateSchema = z.object({
-  studentId: z.string(),
-  feeStructureId: z.string(),
-});
+const paymentCreateSchema = z
+  .object({
+    feeStructureId: z.string(),
+    studentId: z.string().optional(),
+    applicantUserId: z.string().optional(),
+  })
+  .refine((d) => Boolean(d.studentId) !== Boolean(d.applicantUserId), {
+    message: "Provide exactly one of studentId or applicantUserId",
+  });
 
 const paymentStatusSchema = z.object({
   status: z.enum(["PENDING", "PAID", "FAILED", "REFUNDED"]),
@@ -67,12 +74,20 @@ export async function deleteStructureHandler(req: Request, res: Response): Promi
 export async function listPaymentsHandler(req: Request, res: Response): Promise<void> {
   try {
     const { studentId, feeStructureId, status } = req.query as Record<string, string | undefined>;
+    const restrictToStudentUserId =
+      req.user!.role === Role.PRESENT_STUDENT || req.user!.role === Role.GUEST_STUDENT || req.user!.role === Role.ALUMNI
+        ? req.user!.id
+        : undefined;
     res.json(
-      await svc.getFeePayments(req.tenant.id, {
-        studentId,
-        feeStructureId,
-        status: status as PaymentStatus | undefined,
-      })
+      await svc.getFeePayments(
+        req.tenant.id,
+        {
+          studentId,
+          feeStructureId,
+          status: status as PaymentStatus | undefined,
+        },
+        restrictToStudentUserId ? { restrictToStudentUserId } : undefined
+      )
     );
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });

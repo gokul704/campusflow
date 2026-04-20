@@ -1,9 +1,10 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { authenticate } from "../../middleware/authenticate";
+import { requireModuleAction } from "../../lib/tenantAccessMatrix";
 import { prisma } from "@campusflow/db";
 
 const router = Router();
-router.use(authenticate);
+router.use(authenticate, requireModuleAction("dashboard", "view"));
 
 /** Express 4 does not forward rejected promises from async route handlers to `errorHandler` — wrap explicitly. */
 function asyncHandler(
@@ -32,6 +33,7 @@ router.get(
       totalSections,
       feeCollectedThisMonth,
       pendingFeesCount,
+      pendingFeesAmountAgg,
       upcomingEventsCount,
       totalUsers,
     ] = await Promise.all([
@@ -46,6 +48,10 @@ router.get(
         _sum: { amount: true },
       }),
       prisma.feePayment.count({ where: { tenantId, status: "PENDING" } }),
+      prisma.feePayment.aggregate({
+        where: { tenantId, status: "PENDING" },
+        _sum: { amount: true },
+      }),
       prisma.event.count({ where: { tenantId, startDate: { gte: now } } }),
       prisma.user.count({ where: { tenantId, isActive: true } }),
     ]);
@@ -59,6 +65,7 @@ router.get(
       totalSections,
       feeCollectedThisMonth: feeCollectedThisMonth._sum?.amount ?? 0,
       pendingFeesCount,
+      pendingFeesAmount: pendingFeesAmountAgg._sum?.amount ?? 0,
       upcomingEventsCount,
       totalUsers,
     });

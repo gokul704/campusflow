@@ -12,6 +12,27 @@ const updateSchema = z.object({
   code: z.string().min(2).max(10).optional(),
 });
 
+const bulkDepartmentRow = z.object({
+  name: z.string().min(2),
+  code: z.string().min(2).max(10),
+});
+const bulkDepartmentsSchema = z.object({
+  rows: z.array(bulkDepartmentRow).min(1).max(500),
+});
+
+export async function bulkCreateDepartmentsHandler(req: Request, res: Response): Promise<void> {
+  const r = bulkDepartmentsSchema.safeParse(req.body);
+  if (!r.success) {
+    res.status(400).json({ error: r.error.flatten() });
+    return;
+  }
+  try {
+    res.status(201).json(await deptService.bulkCreateDepartments(req.tenant.id, r.data.rows));
+  } catch (err: unknown) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+}
+
 export async function listDepartmentsHandler(req: Request, res: Response): Promise<void> {
   const depts = await deptService.listDepartments(req.tenant.id);
   res.json(depts);

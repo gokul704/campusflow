@@ -1,11 +1,19 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middleware/authenticate";
-import { listBatchesHandler, createBatchHandler, updateBatchHandler, deleteBatchHandler } from "./batches.controller";
+import { OFFICE_ROLES } from "../../middleware/roleGroups";
+import {
+  listBatchesHandler,
+  createBatchHandler,
+  bulkCreateBatchesHandler,
+  updateBatchHandler,
+  deleteBatchHandler,
+} from "./batches.controller";
 
 const router = Router();
 router.use(authenticate);
 router.get("/", listBatchesHandler);
-router.post("/", authorize("ADMIN"), createBatchHandler);
-router.put("/:id", authorize("ADMIN"), updateBatchHandler);
-router.delete("/:id", authorize("ADMIN"), deleteBatchHandler);
+router.post("/bulk", authorize(...OFFICE_ROLES), bulkCreateBatchesHandler);
+router.post("/", authorize(...OFFICE_ROLES), createBatchHandler);
+router.put("/:id", authorize(...OFFICE_ROLES), updateBatchHandler);
+router.delete("/:id", authorize(...OFFICE_ROLES), deleteBatchHandler);
 export default router;

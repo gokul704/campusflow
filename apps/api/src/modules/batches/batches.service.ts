@@ -27,3 +27,21 @@ export async function deleteBatch(tenantId: string, id: string) {
   if (count > 0) throw new Error(`Cannot delete — ${count} students assigned to this batch`);
   return prisma.batch.delete({ where: { id } });
 }
+
+export async function bulkCreateBatches(
+  tenantId: string,
+  rows: { name: string; startYear: number; endYear: number }[]
+) {
+  const failed: { index: number; error: string }[] = [];
+  let created = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    try {
+      await createBatch(tenantId, row.name.trim(), row.startYear, row.endYear);
+      created++;
+    } catch (e) {
+      failed.push({ index: i, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+  return { created, failed };
+}

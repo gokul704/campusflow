@@ -1,4 +1,5 @@
 import { prisma } from "@campusflow/db";
+import { resolveBatchCourseCreateIds } from "../../lib/bulkImportResolvers";
 
 const batchCourseInclude = {
   batch: { select: { name: true } },
@@ -75,4 +76,40 @@ export async function deleteBatchCourse(tenantId: string, id: string) {
   }
 
   return prisma.batchCourse.delete({ where: { id } });
+}
+
+export async function bulkCreateBatchCourses(
+  tenantId: string,
+  rows: Array<{
+    batchCourseId?: string | null;
+    batchId?: string | null;
+    sectionId?: string | null;
+    batchName?: string | null;
+    sectionName?: string | null;
+    courseCode?: string | null;
+    courseId?: string | null;
+    semester: number;
+    facultyId?: string | null;
+    facultyEmail?: string | null;
+  }>
+) {
+  const failed: { index: number; error: string }[] = [];
+  let created = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    try {
+      const ids = await resolveBatchCourseCreateIds(tenantId, row);
+      await createBatchCourse(tenantId, {
+        batchId: ids.batchId,
+        sectionId: ids.sectionId,
+        courseId: ids.courseId,
+        semester: ids.semester,
+        ...(ids.facultyId ? { facultyId: ids.facultyId } : {}),
+      });
+      created++;
+    } catch (e) {
+      failed.push({ index: i, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+  return { created, failed };
 }

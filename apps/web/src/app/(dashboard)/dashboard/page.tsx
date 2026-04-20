@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/api";
 import { useDarkMode } from "@/hooks/useDarkMode";
@@ -13,7 +14,7 @@ import { GraduationCap, Users, BookOpen, Wallet, CalendarCheck, Building2 } from
 interface Stats {
   totalStudents: number; totalFaculty: number; totalDepartments: number;
   totalCourses: number; totalBatches: number; totalSections: number;
-  feeCollectedThisMonth: number; pendingFeesCount: number;
+  feeCollectedThisMonth: number; pendingFeesCount: number; pendingFeesAmount: number;
   upcomingEventsCount: number; totalUsers: number;
 }
 interface WeeklyAtt { day: string; present: number; absent: number; }
@@ -32,6 +33,8 @@ interface Charts {
   recentAssignments: RecentAssignment[];
   recentEvents: RecentEvent[];
 }
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 const DONUT_COLORS = ["#3B82F6", "#06B6D4", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"];
@@ -64,12 +67,13 @@ const Spinner = () => (
 );
 
 // ─── Stat card ──────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, Icon, bg, ic, loading }: {
+function StatCard({ label, value, sub, Icon, bg, ic, loading, href }: {
   label: string; value: string | number; sub: string;
   Icon: React.ElementType; bg: string; ic: string; loading: boolean;
+  href?: string;
 }) {
-  return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
+  const inner = (
+    <>
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${bg}`}>
         <Icon size={17} className={ic} />
       </div>
@@ -80,8 +84,18 @@ function StatCard({ label, value, sub, Icon, bg, ic, loading }: {
           : <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{value}</p>}
         <p className="text-[10px] text-gray-400 truncate">{sub}</p>
       </div>
-    </div>
+    </>
   );
+  const cls =
+    "bg-white dark:bg-gray-900 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm transition-shadow hover:shadow-md";
+  if (href && !loading) {
+    return (
+      <Link href={href} className={`${cls} cursor-pointer`}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={cls}>{inner}</div>;
 }
 
 // ─── Attendance tooltip ─────────────────────────────────────────────────────────
@@ -256,6 +270,7 @@ export default function DashboardPage() {
   const isDark = useDarkMode();
   const [stats, setStats] = useState<Stats | null>(null);
   const [charts, setCharts] = useState<Charts | null>(null);
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [statsL, setStatsL] = useState(true);
   const [chartsL, setChartsL] = useState(true);
   /** Recharts needs a mounted client layout; avoids 0×0 ResponsiveContainer. */
@@ -264,6 +279,16 @@ export default function DashboardPage() {
   useEffect(() => {
     const id = requestAnimationFrame(() => setChartsReady(true));
     return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (r.ok && data?.modules && typeof data.modules === "object") setModules(data.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
   }, []);
 
   useEffect(() => {
@@ -288,28 +313,44 @@ export default function DashboardPage() {
 
   const batchDist = charts?.batchDistribution ?? [];
   const totalBatch = batchDist.reduce((s, b) => s + (b?.value ?? 0), 0);
+  const canView = (module: string) => {
+    if (!modules) return true;
+    return modules[module]?.view === true;
+  };
+  const canCreate = (module: string) => {
+    if (!modules) return false;
+    return modules[module]?.create === true;
+  };
 
+  const pendingAmt = stats?.pendingFeesAmount ?? 0;
   const CARDS = [
-    { label: "Total Students", value: stats?.totalStudents ?? 0,              sub: `${stats?.totalBatches ?? 0} batches · ${stats?.totalSections ?? 0} sections`, Icon: GraduationCap, bg: "bg-blue-50",    ic: "text-blue-600" },
-    { label: "Faculty",        value: stats?.totalFaculty ?? 0,               sub: `${stats?.totalDepartments ?? 0} departments`,                                  Icon: Users,         bg: "bg-violet-50", ic: "text-violet-600" },
-    { label: "Total Staff",    value: stats?.totalUsers ?? 0,                 sub: "Active accounts",                                                              Icon: Building2,     bg: "bg-cyan-50",   ic: "text-cyan-600" },
-    { label: "Fee Collected",  value: fmt(stats?.feeCollectedThisMonth ?? 0), sub: `${stats?.pendingFeesCount ?? 0} pending`,                                      Icon: Wallet,        bg: "bg-emerald-50",ic: "text-emerald-600" },
-    { label: "Courses",        value: stats?.totalCourses ?? 0,               sub: `${stats?.totalBatches ?? 0} active batches`,                                   Icon: BookOpen,      bg: "bg-amber-50",  ic: "text-amber-600" },
-    { label: "Events Ahead",   value: stats?.upcomingEventsCount ?? 0,        sub: "Upcoming",                                                                     Icon: CalendarCheck, bg: "bg-rose-50",   ic: "text-rose-600" },
-  ];
+    { module: "students", label: "Total Students", value: stats?.totalStudents ?? 0,              sub: `${stats?.totalBatches ?? 0} batches · ${stats?.totalSections ?? 0} sections`, Icon: GraduationCap, bg: "bg-blue-50",    ic: "text-blue-600", href: "/dashboard/students" },
+    { module: "faculty", label: "Faculty",        value: stats?.totalFaculty ?? 0,               sub: `${stats?.totalDepartments ?? 0} departments`,                                  Icon: Users,         bg: "bg-violet-50", ic: "text-violet-600", href: "/dashboard/faculty" },
+    { module: "users", label: "Total Staff",    value: stats?.totalUsers ?? 0,                 sub: "Active accounts",                                                              Icon: Building2,     bg: "bg-cyan-50",   ic: "text-cyan-600", href: "/dashboard/users" },
+    { module: "fees", label: "Fee Collected",  value: fmt(stats?.feeCollectedThisMonth ?? 0), sub: `${stats?.pendingFeesCount ?? 0} pending · ${fmt(pendingAmt)} due`,              Icon: Wallet,        bg: "bg-emerald-50",ic: "text-emerald-600", href: "/dashboard/fees?tab=payments&status=PENDING" },
+    { module: "courses", label: "Courses",        value: stats?.totalCourses ?? 0,               sub: `${stats?.totalBatches ?? 0} active batches`,                                   Icon: BookOpen,      bg: "bg-amber-50",  ic: "text-amber-600", href: "/dashboard/courses" },
+    { module: "events", label: "Events Ahead",   value: stats?.upcomingEventsCount ?? 0,        sub: "Upcoming",                                                                     Icon: CalendarCheck, bg: "bg-rose-50",   ic: "text-rose-600", href: "/dashboard/events" },
+  ].filter((c) => canView(c.module));
+  const showBatchDist = canView("students");
+  const showAttendance = canView("attendance");
+  const showNotice = canView("events") || canView("assignments");
+  const showCalendar = canView("events");
 
   return (
     <div className="flex flex-col gap-4 pb-2">
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        {CARDS.map((c) => (
-          <StatCard key={c.label} {...c} loading={statsL} />
-        ))}
-      </div>
+      {CARDS.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          {CARDS.map((c) => (
+            <StatCard key={c.label} {...c} loading={statsL} />
+          ))}
+        </div>
+      )}
 
       {/* Charts + widgets: explicit min-heights so rows never collapse; main scrolls */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Students by Batch (Donut) */}
+        {showBatchDist && (
         <div className="flex min-h-[320px] flex-col rounded-xl bg-white p-4 shadow-sm dark:bg-gray-900">
           <div className="mb-2 flex flex-shrink-0 items-center justify-between">
             <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200">Students by Batch</h3>
@@ -377,8 +418,10 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Weekly Attendance (Bar) */}
+        {showAttendance && (
         <div className="flex min-h-[320px] flex-col rounded-xl bg-white p-4 shadow-sm dark:bg-gray-900">
           <div className="mb-2 flex flex-shrink-0 items-center justify-between">
             <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200">Attendance — This Week</h3>
@@ -434,17 +477,18 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        )}
 
-        <NoticeBoard
+        {showNotice && <NoticeBoard
           recentEvents={charts?.recentEvents ?? []}
           recentAssignments={charts?.recentAssignments ?? []}
           loading={chartsL}
-        />
+        />}
 
-        <MiniCalendar
+        {showCalendar && <MiniCalendar
           eventDays={charts?.eventDays ?? []}
           upcomingEvents={charts?.upcomingEvents ?? []}
-        />
+        />}
 
       </div>
     </div>

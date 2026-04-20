@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { authFetch, formatApiError } from "@/lib/api";
+import {
+  alertBulkImportSummary,
+  downloadExcelTemplate,
+  excelCell,
+  readExcelFirstSheet,
+} from "@/lib/excelImport";
+import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
 interface Department {
@@ -10,12 +17,27 @@ interface Department {
   code: string;
 }
 
+type DeptImportRow = { name: string; code: string };
+
+function deptRowFromExcel(r: Record<string, unknown>): DeptImportRow | null {
+  const name = excelCell(r, "name", "department name", "dept name");
+  const code = excelCell(r, "code", "department code", "dept code").toUpperCase();
+  if (!name && !code) return null;
+  return { name, code };
+}
+
 export default function DepartmentsPage() {
   const [depts, setDepts] = useState<Department[]>([]);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<DeptImportRow[]>([]);
+  const [importParseError, setImportParseError] = useState("");
+  const [importSubmitError, setImportSubmitError] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
 
   async function fetchDepts() {
     const res = await authFetch("/api/departments");
@@ -28,6 +50,7 @@ export default function DepartmentsPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setDeleteError("");
     setLoading(true);
     try {
       const res = await authFetch("/api/departments", {
@@ -42,15 +65,114 @@ export default function DepartmentsPage() {
     finally { setLoading(false); }
   }
 
+  const [deleteError, setDeleteError] = useState("");
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this department?")) return;
-    await authFetch(`/api/departments/${id}`, { method: "DELETE" });
-    fetchDepts();
+    setDeleteError("");
+    try {
+      const res = await authFetch(`/api/departments/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteError(formatApiError(data));
+        return;
+      }
+      void fetchDepts();
+    } catch {
+      setDeleteError("Could not reach the server. Try again.");
+    }
+  }
+
+  function openImport() {
+    setImportRows([]);
+    setImportParseError("");
+    setImportSubmitError("");
+    setShowImport(true);
+  }
+
+  async function handleExcelFile(file: File) {
+    setImportParseError("");
+    try {
+      const raw = await readExcelFirstSheet(file);
+      const rows: DeptImportRow[] = [];
+      for (const r of raw) {
+        const parsed = deptRowFromExcel(r);
+        if (!parsed) continue;
+        if (!parsed.name || !parsed.code) {
+          setImportParseError("Each row needs Name and Code.");
+          return;
+        }
+        rows.push({ name: parsed.name, code: parsed.code });
+      }
+      if (rows.length === 0) {
+        setImportParseError("No data rows found.");
+        return;
+      }
+      setImportRows(rows);
+    } catch {
+      setImportParseError("Could not read the Excel file.");
+    }
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setImportSubmitError("");
+    if (importRows.length === 0) {
+      setImportSubmitError("Parse an Excel file first.");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const res = await authFetch("/api/departments/bulk", {
+        method: "POST",
+        body: JSON.stringify({ rows: importRows }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportSubmitError(formatApiError(data));
+        return;
+      }
+      setShowImport(false);
+      void fetchDepts();
+      alertBulkImportSummary(data.created ?? 0, data.failed ?? []);
+    } catch {
+      setImportSubmitError("Request failed");
+    } finally {
+      setImportLoading(false);
+    }
   }
 
   return (
     <div>
-      <h1 className={`${dash.pageTitle} mb-6`}>Departments</h1>
+      {deleteError && (
+        <div className={`${dash.errorBanner} mb-4`} role="alert">
+          {deleteError}
+          <button
+            type="button"
+            className="ml-3 text-sm font-medium underline"
+            onClick={() => setDeleteError("")}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className={dash.pageTitle}>Departments</h1>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              downloadExcelTemplate("departments-import-template.xlsx", "Departments", ["Name", "Code"])
+            }
+            className={dash.btnSecondary}
+          >
+            Download Excel template
+          </button>
+          <button type="button" onClick={openImport} className={dash.btnSecondary}>
+            Import Excel
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Create form */}
@@ -123,6 +245,40 @@ export default function DepartmentsPage() {
           </table>
         </div>
       </div>
+
+      {showImport && (
+        <div className={dash.modalOverlay}>
+          <div className={`${dash.modalPanel} max-w-lg`}>
+            <h2 className={`${dash.sectionTitle} mb-4`}>Import departments</h2>
+            <BulkImportOrderHint className="mb-3" />
+            <p className={`mb-3 text-xs ${dash.cellMuted}`}>
+              Columns: <strong>Name</strong>, <strong>Code</strong> (one department per row).
+            </p>
+            {importParseError && <div className={dash.errorBanner}>{importParseError}</div>}
+            {importSubmitError && <div className={dash.errorBanner}>{importSubmitError}</div>}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="mb-3 block w-full text-sm"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleExcelFile(f);
+              }}
+            />
+            {importRows.length > 0 && (
+              <p className={`mb-3 text-sm ${dash.cellMuted}`}>{importRows.length} row(s) ready to import.</p>
+            )}
+            <form onSubmit={handleBulkSubmit} className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowImport(false)} className={`flex-1 ${dash.btnSecondary}`}>
+                Cancel
+              </button>
+              <button type="submit" disabled={importLoading || importRows.length === 0} className={`flex-1 ${dash.btnPrimary}`}>
+                {importLoading ? "Importing…" : "Import"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,7 +7,15 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "seed": "npm run db:deploy --workspace=@campusflow/db && dotenv -e ../../.env -- tsx src/scripts/seed.ts",
-    "seed:data": "npm run db:deploy --workspace=@campusflow/db && dotenv -e ../../.env -- tsx src/scripts/seed-data.ts"
+    "seed:data": "npm run db:deploy --workspace=@campusflow/db && dotenv -e ../../.env -- tsx src/scripts/seed-data.ts",
+    "seed:roles": "npm run db:deploy --workspace=@campusflow/db && dotenv -e ../../.env -- tsx src/scripts/seed-role-users.ts",
+    "seed:maa": "npm run db:deploy --workspace=@campusflow/db && dotenv -e ../../.env -- tsx src/scripts/seed-maa.ts",
+    "api:seed": "npm run seed --",
+    "api:seed:data": "npm run seed:data --",
+    "api:seed:roles": "npm run seed:roles --",
+    "api:seed:maa": "npm run seed:maa --",
+    "delete-tenant": "dotenv -e ../../.env -- tsx src/scripts/delete-tenant-by-slug.ts",
+    "api:delete-tenant": "npm run delete-tenant --"
   },
   "dependencies": {
     "@campusflow/db": "*",

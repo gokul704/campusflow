@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/api";
 import { dash } from "@/lib/dashboardUi";
-import InviteModal from "./InviteModal";
+import CreateUserModal from "./CreateUserModal";
 
 interface User {
   id: string;
@@ -17,10 +17,15 @@ interface User {
 
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300",
-  HOD: "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300",
-  FACULTY: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-  STUDENT: "bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300",
-  PARENT: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-300",
+  CMD: "bg-rose-100 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200",
+  PRINCIPAL: "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300",
+  STAFF: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100",
+  OPERATIONS_LECTURER: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
+  OPERATIONS_HR: "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/40 dark:text-cyan-200",
+  OPERATIONS_FRONT_DESK: "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+  PRESENT_STUDENT: "bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300",
+  ALUMNI: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300",
+  GUEST_STUDENT: "bg-teal-100 text-teal-900 dark:bg-teal-950/40 dark:text-teal-200",
 };
 
 export default function UsersPage() {
@@ -30,26 +35,43 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
-  const [showInvite, setShowInvite] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
-  async function fetchUsers() {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: "20" });
-    if (search) params.set("search", search);
-    if (role) params.set("role", role);
+  const searchRef = useRef(search);
+  const roleRef = useRef(role);
+  searchRef.current = search;
+  roleRef.current = role;
 
-    const res = await authFetch(`/api/users?${params}`);
-    const data = await res.json();
-    setUsers(data.users ?? []);
-    setTotal(data.pagination?.total ?? 0);
-    setLoading(false);
-  }
+  const fetchUsers = useCallback(
+    async (pageOverride?: number) => {
+      setLoading(true);
+      const pageToUse = pageOverride ?? page;
+      const params = new URLSearchParams({ page: String(pageToUse), limit: "20" });
+      if (searchRef.current) params.set("search", searchRef.current);
+      if (roleRef.current) params.set("role", roleRef.current);
 
-  useEffect(() => { fetchUsers(); }, [page, role]);
+      const res = await authFetch(`/api/users?${params}`);
+      const data = await res.json();
+      setUsers(data.users ?? []);
+      setTotal(data.pagination?.total ?? 0);
+      setLoading(false);
+    },
+    [page, role]
+  );
 
-  // Debounce search
+  const fetchUsersRef = useRef(fetchUsers);
+  fetchUsersRef.current = fetchUsers;
+
   useEffect(() => {
-    const t = setTimeout(() => { setPage(1); fetchUsers(); }, 400);
+    void fetchUsers();
+  }, [fetchUsers]);
+
+  // Debounce search only — do not depend on `fetchUsers` or pagination resets when page/role changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      void fetchUsersRef.current(1);
+    }, 400);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -57,19 +79,24 @@ export default function UsersPage() {
     await authFetch(`/api/users/${user.id}/${user.isActive ? "deactivate" : "activate"}`, {
       method: "PATCH",
     });
-    fetchUsers();
+    void fetchUsers();
   }
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className={dash.pageTitle}>Users</h1>
+        <div>
+          <h1 className={dash.pageTitle}>Users</h1>
+          <p className="mt-1 max-w-2xl text-xs text-gray-500 dark:text-gray-400">
+            New accounts appear here immediately. Students are created from the Students page (with roll, batch, and section). Use the institute default password in API .env unless you set one per user.
+          </p>
+        </div>
         <button
           type="button"
-          onClick={() => setShowInvite(true)}
+          onClick={() => setShowCreate(true)}
           className={dash.btnPrimary}
         >
-          + Invite User
+          + Create user
         </button>
       </div>
 
@@ -88,10 +115,15 @@ export default function UsersPage() {
         >
           <option value="">All Roles</option>
           <option value="ADMIN">Admin</option>
-          <option value="HOD">HOD</option>
-          <option value="FACULTY">Faculty</option>
-          <option value="STUDENT">Student</option>
-          <option value="PARENT">Parent</option>
+          <option value="CMD">CMD (Managing Director)</option>
+          <option value="PRINCIPAL">Principal</option>
+          <option value="STAFF">Staff</option>
+          <option value="OPERATIONS_LECTURER">Operations — Lecturer</option>
+          <option value="OPERATIONS_HR">Operations — HR</option>
+          <option value="OPERATIONS_FRONT_DESK">Operations — Front desk</option>
+          <option value="PRESENT_STUDENT">Present student</option>
+          <option value="ALUMNI">Alumni</option>
+          <option value="GUEST_STUDENT">Guest student</option>
         </select>
       </div>
 
@@ -152,10 +184,14 @@ export default function UsersPage() {
         )}
       </div>
 
-      {showInvite && (
-        <InviteModal
-          onClose={() => setShowInvite(false)}
-          onSuccess={() => { setShowInvite(false); fetchUsers(); }}
+      {showCreate && (
+        <CreateUserModal
+          onClose={() => setShowCreate(false)}
+          onSuccess={() => {
+            setShowCreate(false);
+            setPage(1);
+            void fetchUsers(1);
+          }}
         />
       )}
     </div>

@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { authFetch, formatApiError } from "@/lib/api";
+import {
+  alertBulkImportSummary,
+  downloadExcelTemplate,
+  excelCell,
+  normalizeCourseCode,
+  readExcelFirstSheet,
+} from "@/lib/excelImport";
+import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
 interface BatchCourse {
@@ -17,6 +25,54 @@ interface BatchItem { id: string; name: string; }
 interface SectionItem { id: string; name: string; }
 interface CourseItem { id: string; name: string; code: string; }
 interface FacultyItem { id: string; user: { firstName: string; lastName: string }; }
+
+type BatchCourseImportRow = {
+  batchId?: string;
+  sectionId?: string;
+  batchName?: string;
+  sectionName?: string;
+  courseCode?: string;
+  courseId?: string;
+  semester: number;
+  facultyEmail?: string;
+  facultyId?: string;
+};
+
+function batchCourseRowFromExcel(r: Record<string, unknown>): BatchCourseImportRow | null {
+  const batchId = excelCell(r, "batchid", "batch id", "batch_id");
+  const sectionId = excelCell(r, "sectionid", "section id", "section_id");
+  const batchName = excelCell(r, "batchname", "batch name", "batch") || undefined;
+  const sectionName = excelCell(r, "sectionname", "section name", "section", "sec", "division") || undefined;
+  const courseCodeRaw = excelCell(
+    r,
+    "coursecode",
+    "course code",
+    "subjectcode",
+    "subject code",
+    "papercode",
+    "paper code",
+    "scode",
+    "s code",
+    "code"
+  );
+  const courseCode = courseCodeRaw ? normalizeCourseCode(courseCodeRaw) : undefined;
+  const courseId = excelCell(r, "courseid", "course id", "course_id") || undefined;
+  const semester = Number(excelCell(r, "semester", "sem"));
+  const facultyEmail = excelCell(r, "facultyemail", "faculty email", "teacher email") || undefined;
+  const facultyId = excelCell(r, "facultyid", "faculty id") || undefined;
+  if (!batchId && !sectionId && !batchName && !sectionName && !courseCode && !courseId) return null;
+  return {
+    batchId: batchId || undefined,
+    sectionId: sectionId || undefined,
+    batchName,
+    sectionName,
+    courseCode,
+    courseId,
+    semester,
+    facultyEmail,
+    facultyId: facultyId || undefined,
+  };
+}
 
 export default function BatchCoursesPage() {
   const [batchCourses, setBatchCourses] = useState<BatchCourse[]>([]);
@@ -37,6 +93,12 @@ export default function BatchCoursesPage() {
   const [form, setForm] = useState({ batchId: "", sectionId: "", courseId: "", semester: "1", facultyId: "" });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
+
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<BatchCourseImportRow[]>([]);
+  const [importParseError, setImportParseError] = useState("");
+  const [importSubmitError, setImportSubmitError] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
 
   async function fetchBatchCourses() {
     setLoading(true);
@@ -120,13 +182,111 @@ export default function BatchCoursesPage() {
     fetchBatchCourses();
   }
 
+  function openImport() {
+    setImportRows([]);
+    setImportParseError("");
+    setImportSubmitError("");
+    setShowImport(true);
+  }
+
+  async function handleExcelFile(file: File) {
+    setImportParseError("");
+    try {
+      const raw = await readExcelFirstSheet(file);
+      const rows: BatchCourseImportRow[] = [];
+      for (const row of raw) {
+        const parsed = batchCourseRowFromExcel(row);
+        if (!parsed) continue;
+        const byId = parsed.batchId && parsed.sectionId;
+        const byName = parsed.batchName && parsed.sectionName;
+        const courseOk = parsed.courseCode || parsed.courseId;
+        if (!courseOk || !Number.isFinite(parsed.semester)) {
+          setImportParseError("Each row needs Course Code or Course ID, Semester, and batch/section (by ID pair or by name pair).");
+          return;
+        }
+        if (!byId && !byName) {
+          setImportParseError("Each row needs either (Batch ID + Section ID) or (Batch Name + Section Name).");
+          return;
+        }
+        rows.push(parsed);
+      }
+      if (rows.length === 0) {
+        setImportParseError("No data rows found.");
+        return;
+      }
+      setImportRows(rows);
+    } catch {
+      setImportParseError("Could not read the Excel file.");
+    }
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setImportSubmitError("");
+    if (importRows.length === 0) {
+      setImportSubmitError("Parse an Excel file first.");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const res = await authFetch("/api/batch-courses/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          rows: importRows.map((r) => ({
+            batchId: r.batchId || null,
+            sectionId: r.sectionId || null,
+            batchName: r.batchName || null,
+            sectionName: r.sectionName || null,
+            courseCode: r.courseCode || null,
+            courseId: r.courseId || null,
+            semester: r.semester,
+            facultyEmail: r.facultyEmail || null,
+            facultyId: r.facultyId || null,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportSubmitError(formatApiError(data));
+        return;
+      }
+      setShowImport(false);
+      void fetchBatchCourses();
+      alertBulkImportSummary(data.created ?? 0, data.failed ?? []);
+    } catch {
+      setImportSubmitError("Request failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Batch Courses</h1>
-        <button type="button" onClick={openForm} className={dash.btnPrimary}>
-          + Assign Course
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              downloadExcelTemplate("batch-courses-import-template.xlsx", "BatchCourses", [
+                "Batch Name",
+                "Section Name",
+                "S. code / Course code",
+                "Semester",
+                "Faculty Email",
+              ])
+            }
+            className={dash.btnSecondary}
+          >
+            Download Excel template
+          </button>
+          <button type="button" onClick={openImport} className={dash.btnSecondary}>
+            Import Excel
+          </button>
+          <button type="button" onClick={openForm} className={dash.btnPrimary}>
+            + Assign Course
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -284,6 +444,42 @@ export default function BatchCoursesPage() {
                   {formLoading ? "Saving..." : "Assign"}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showImport && (
+        <div className={dash.modalOverlay}>
+          <div className={`${dash.modalPanel} max-h-[90vh] max-w-lg overflow-y-auto`}>
+            <h2 className={`${dash.sectionTitle} mb-4`}>Import batch courses</h2>
+            <BulkImportOrderHint className="mb-3" />
+            <p className={`mb-3 text-xs ${dash.cellMuted}`}>
+              Use <strong>Batch Name</strong> and <strong>Section Name</strong> as shown under Batches (or Batch ID + Section ID).{" "}
+              <strong>S. code / Course code</strong> accepts M.Sc(Aud)-style codes (e.g. <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">Aud 201M</code> → matches{" "}
+              <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">AUD201M</code> in Courses). <strong>Faculty Email</strong> is optional.
+            </p>
+            {importParseError && <div className={dash.errorBanner}>{importParseError}</div>}
+            {importSubmitError && <div className={dash.errorBanner}>{importSubmitError}</div>}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="mb-3 block w-full text-sm"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleExcelFile(f);
+              }}
+            />
+            {importRows.length > 0 && (
+              <p className={`mb-3 text-sm ${dash.cellMuted}`}>{importRows.length} row(s) ready to import.</p>
+            )}
+            <form onSubmit={handleBulkSubmit} className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowImport(false)} className={`flex-1 ${dash.btnSecondary}`}>
+                Cancel
+              </button>
+              <button type="submit" disabled={importLoading || importRows.length === 0} className={`flex-1 ${dash.btnPrimary}`}>
+                {importLoading ? "Importing…" : "Import"}
+              </button>
             </form>
           </div>
         </div>

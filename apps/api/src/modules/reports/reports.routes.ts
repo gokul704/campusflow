@@ -1,10 +1,20 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middleware/authenticate";
-import { attendanceReportHandler, gradeReportHandler, feeReportHandler } from "./reports.controller";
+import { LEADERSHIP_ROLES } from "../../middleware/roleGroups";
+import { requireModuleAction } from "../../lib/tenantAccessMatrix";
+import {
+  attendanceReportHandler,
+  gradeReportHandler,
+  feeReportHandler,
+  exportCsvReportHandler,
+  timetableConflictsHandler,
+} from "./reports.controller";
 
 const router = Router();
 router.use(authenticate);
-router.get("/attendance/:batchCourseId", attendanceReportHandler);
-router.get("/grades/:batchCourseId", gradeReportHandler);
-router.get("/fees", authorize("ADMIN"), feeReportHandler);
+router.get("/export", requireModuleAction("reports", "view"), exportCsvReportHandler);
+router.get("/timetable/conflicts", requireModuleAction("reports", "view"), timetableConflictsHandler);
+router.get("/attendance/:batchCourseId", requireModuleAction("reports", "view"), attendanceReportHandler);
+router.get("/grades/:batchCourseId", requireModuleAction("reports", "view"), gradeReportHandler);
+router.get("/fees", authorize(...LEADERSHIP_ROLES), requireModuleAction("reports", "view"), feeReportHandler);
 export default router;

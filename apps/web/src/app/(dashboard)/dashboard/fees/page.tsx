@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { authFetch } from "@/lib/api";
 import { dash } from "@/lib/dashboardUi";
 
@@ -10,6 +11,7 @@ interface FeeStructure {
   amount: number;
   dueDate: string;
   isRecurring: boolean;
+  isAdmissionFee?: boolean;
   _count: { payments: number };
 }
 
@@ -19,14 +21,23 @@ interface FeePayment {
   status: string;
   paidAt?: string;
   createdAt: string;
-  student: { rollNumber: string; user: { firstName: string; lastName: string; email: string } };
+  student: { rollNumber: string; user: { firstName: string; lastName: string; email: string } } | null;
+  applicantUser: { firstName: string; lastName: string; email: string } | null;
   feeStructure: { name: string; amount: number };
 }
 
 interface StudentOption {
   id: string;
+  userId: string;
   rollNumber: string;
   user: { firstName: string; lastName: string };
+}
+
+interface UserOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
@@ -37,13 +48,14 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
 };
 
 export default function FeesPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"structures" | "payments">("structures");
 
   // Fee structures
   const [structures, setStructures] = useState<FeeStructure[]>([]);
   const [loadingStructures, setLoadingStructures] = useState(true);
   const [showStructureForm, setShowStructureForm] = useState(false);
-  const [structureForm, setStructureForm] = useState({ name: "", amount: "", dueDate: "", isRecurring: false });
+  const [structureForm, setStructureForm] = useState({ name: "", amount: "", dueDate: "", isRecurring: false, isAdmissionFee: false });
   const [structureFormError, setStructureFormError] = useState("");
   const [structureFormLoading, setStructureFormLoading] = useState(false);
 
@@ -57,7 +69,13 @@ export default function FeesPage() {
   // Record payment modal
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [students, setStudents] = useState<StudentOption[]>([]);
-  const [paymentForm, setPaymentForm] = useState({ studentId: "", feeStructureId: "" });
+  const [paymentForm, setPaymentForm] = useState({
+    studentId: "",
+    applicantUserId: "",
+    feeStructureId: "",
+    payer: "student" as "student" | "applicant",
+  });
+  const [applicantUsers, setApplicantUsers] = useState<UserOption[]>([]);
   const [paymentFormError, setPaymentFormError] = useState("");
   const [paymentFormLoading, setPaymentFormLoading] = useState(false);
 
@@ -83,6 +101,13 @@ export default function FeesPage() {
   useEffect(() => { fetchStructures(); }, []);
 
   useEffect(() => {
+    const tab = searchParams.get("tab");
+    const status = searchParams.get("status");
+    if (tab === "payments") setActiveTab("payments");
+    if (status) setFilterStatus(status);
+  }, [searchParams]);
+
+  useEffect(() => {
     if (activeTab === "payments") fetchPayments();
   }, [activeTab, filterFeeStructureId, filterStatus]);
 
@@ -96,12 +121,13 @@ export default function FeesPage() {
         amount: Number(structureForm.amount),
         dueDate: structureForm.dueDate,
         isRecurring: structureForm.isRecurring,
+        isAdmissionFee: structureForm.isAdmissionFee,
       };
       const res = await authFetch("/api/fees/structures", { method: "POST", body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) { setStructureFormError(data.error ?? "Failed to create"); return; }
       setShowStructureForm(false);
-      setStructureForm({ name: "", amount: "", dueDate: "", isRecurring: false });
+      setStructureForm({ name: "", amount: "", dueDate: "", isRecurring: false, isAdmissionFee: false });
       fetchStructures();
     } catch { setStructureFormError("Something went wrong"); }
     finally { setStructureFormLoading(false); }
@@ -115,11 +141,19 @@ export default function FeesPage() {
   }
 
   async function openPaymentForm() {
-    setPaymentForm({ studentId: "", feeStructureId: "" });
+    setPaymentForm({ studentId: "", applicantUserId: "", feeStructureId: "", payer: "student" });
     setPaymentFormError("");
-    const res = await authFetch("/api/students?limit=200");
-    const data = await res.json();
-    setStudents(Array.isArray(data) ? data : data.students ?? []);
+    const [stRes, uRes] = await Promise.all([
+      authFetch("/api/students?limit=200"),
+      authFetch("/api/users?role=PRESENT_STUDENT&limit=200"),
+    ]);
+    const stData = await stRes.json();
+    const uData = await uRes.json();
+    const stList: StudentOption[] = Array.isArray(stData) ? stData : stData.students ?? [];
+    const usersRaw: UserOption[] = Array.isArray(uData) ? uData : uData.users ?? [];
+    const enrolledIds = new Set(stList.map((s) => s.userId));
+    setStudents(stList);
+    setApplicantUsers(usersRaw.filter((u) => !enrolledIds.has(u.id)));
     setShowPaymentForm(true);
   }
 
@@ -128,9 +162,13 @@ export default function FeesPage() {
     setPaymentFormError("");
     setPaymentFormLoading(true);
     try {
+      const body =
+        paymentForm.payer === "applicant"
+          ? { applicantUserId: paymentForm.applicantUserId, feeStructureId: paymentForm.feeStructureId }
+          : { studentId: paymentForm.studentId, feeStructureId: paymentForm.feeStructureId };
       const res = await authFetch("/api/fees/payments", {
         method: "POST",
-        body: JSON.stringify({ studentId: paymentForm.studentId, feeStructureId: paymentForm.feeStructureId }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) { setPaymentFormError(data.error ?? "Failed to record payment"); return; }
@@ -141,7 +179,10 @@ export default function FeesPage() {
   }
 
   async function markPaid(payment: FeePayment) {
-    if (!confirm(`Mark payment for "${payment.student.user.firstName} ${payment.student.user.lastName}" as PAID?`)) return;
+    const who = payment.student
+      ? `${payment.student.user.firstName} ${payment.student.user.lastName}`
+      : `${payment.applicantUser?.firstName ?? ""} ${payment.applicantUser?.lastName ?? ""}`.trim() || "Applicant";
+    if (!confirm(`Mark payment for "${who}" as PAID?`)) return;
     const res = await authFetch(`/api/fees/payments/${payment.id}/status`, {
       method: "PUT",
       body: JSON.stringify({ status: "PAID", paidAt: new Date().toISOString() }),
@@ -153,8 +194,12 @@ export default function FeesPage() {
   // Client-side student search filter
   const filteredPayments = filterStudentSearch
     ? payments.filter(p => {
-        const name = `${p.student.user.firstName} ${p.student.user.lastName}`.toLowerCase();
-        return name.includes(filterStudentSearch.toLowerCase()) || p.student.rollNumber.toLowerCase().includes(filterStudentSearch.toLowerCase());
+        const q = filterStudentSearch.toLowerCase();
+        const name = p.student
+          ? `${p.student.user.firstName} ${p.student.user.lastName}`.toLowerCase()
+          : `${p.applicantUser?.firstName ?? ""} ${p.applicantUser?.lastName ?? ""}`.toLowerCase();
+        const roll = p.student?.rollNumber?.toLowerCase() ?? "";
+        return name.includes(q) || roll.includes(q) || (p.applicantUser?.email?.toLowerCase().includes(q) ?? false);
       })
     : payments;
 
@@ -165,7 +210,7 @@ export default function FeesPage() {
         {activeTab === "structures" && (
           <button
             type="button"
-            onClick={() => { setStructureForm({ name: "", amount: "", dueDate: "", isRecurring: false }); setStructureFormError(""); setShowStructureForm(true); }}
+            onClick={() => { setStructureForm({ name: "", amount: "", dueDate: "", isRecurring: false, isAdmissionFee: false }); setStructureFormError(""); setShowStructureForm(true); }}
             className={dash.btnPrimary}
           >
             + Create Fee Structure
@@ -204,15 +249,16 @@ export default function FeesPage() {
                 <th className={dash.th}>Amount</th>
                 <th className={dash.th}>Due Date</th>
                 <th className={dash.th}>Recurring</th>
+                <th className={dash.th}>Admission</th>
                 <th className={dash.th}>Payments</th>
                 <th className={dash.th}>Actions</th>
               </tr>
             </thead>
             <tbody className={dash.tbodyDivide}>
               {loadingStructures ? (
-                <tr><td colSpan={6} className={dash.emptyCell}>Loading...</td></tr>
+                <tr><td colSpan={7} className={dash.emptyCell}>Loading...</td></tr>
               ) : structures.length === 0 ? (
-                <tr><td colSpan={6} className={dash.emptyCell}>No fee structures found</td></tr>
+                <tr><td colSpan={7} className={dash.emptyCell}>No fee structures found</td></tr>
               ) : structures.map(s => (
                 <tr key={s.id} className={dash.rowHover}>
                   <td className={`px-4 py-3 ${dash.cellStrong}`}>{s.name}</td>
@@ -221,6 +267,11 @@ export default function FeesPage() {
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-1 text-xs font-medium ${s.isRecurring ? "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300" : `${dash.badge}`}`}>
                       {s.isRecurring ? "Yes" : "No"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${s.isAdmissionFee ? "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300" : `${dash.badge}`}`}>
+                      {s.isAdmissionFee ? "Yes" : "No"}
                     </span>
                   </td>
                   <td className={`px-4 py-3 ${dash.cellMuted}`}>{s._count.payments}</td>
@@ -271,8 +322,8 @@ export default function FeesPage() {
             <table className="w-full text-sm">
               <thead className={dash.thead}>
                 <tr>
-                  <th className={dash.th}>Student</th>
-                  <th className={dash.th}>Roll No</th>
+                <th className={dash.th}>Payer</th>
+                <th className={dash.th}>Roll No</th>
                   <th className={dash.th}>Fee Name</th>
                   <th className={dash.th}>Amount</th>
                   <th className={dash.th}>Status</th>
@@ -287,8 +338,12 @@ export default function FeesPage() {
                   <tr><td colSpan={7} className={dash.emptyCell}>No payments found</td></tr>
                 ) : filteredPayments.map(p => (
                   <tr key={p.id} className={dash.rowHover}>
-                    <td className={`px-4 py-3 ${dash.cellStrong}`}>{p.student.user.firstName} {p.student.user.lastName}</td>
-                    <td className={`px-4 py-3 ${dash.cellMono}`}>{p.student.rollNumber}</td>
+                    <td className={`px-4 py-3 ${dash.cellStrong}`}>
+                      {p.student
+                        ? <>{p.student.user.firstName} {p.student.user.lastName}</>
+                        : <span className="text-amber-700 dark:text-amber-300">Applicant: {p.applicantUser?.firstName} {p.applicantUser?.lastName}</span>}
+                    </td>
+                    <td className={`px-4 py-3 ${dash.cellMono}`}>{p.student?.rollNumber ?? <span className={dash.emDash}>—</span>}</td>
                     <td className={`px-4 py-3 ${dash.cellMuted}`}>{p.feeStructure.name}</td>
                     <td className={`px-4 py-3 ${dash.cellStrong}`}>₹{p.amount.toLocaleString()}</td>
                     <td className="px-4 py-3">
@@ -355,15 +410,29 @@ export default function FeesPage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isRecurring"
-                  checked={structureForm.isRecurring}
-                  onChange={e => setStructureForm(f => ({ ...f, isRecurring: e.target.checked }))}
-                  className="accent-blue-600"
-                />
-                <label htmlFor="isRecurring" className="text-sm text-gray-700 dark:text-gray-300">Is Recurring</label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isRecurring"
+                    checked={structureForm.isRecurring}
+                    onChange={e => setStructureForm(f => ({ ...f, isRecurring: e.target.checked }))}
+                    className="accent-blue-600"
+                  />
+                  <label htmlFor="isRecurring" className="text-sm text-gray-700 dark:text-gray-300">Is recurring</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isAdmissionFee"
+                    checked={structureForm.isAdmissionFee}
+                    onChange={e => setStructureForm(f => ({ ...f, isAdmissionFee: e.target.checked }))}
+                    className="accent-blue-600"
+                  />
+                  <label htmlFor="isAdmissionFee" className="text-sm text-gray-700 dark:text-gray-300">
+                    Admission fee (paid before student profile is created)
+                  </label>
+                </div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowStructureForm(false)} className={`flex-1 ${dash.btnSecondary}`}>
@@ -385,20 +454,57 @@ export default function FeesPage() {
             <h2 className={`${dash.sectionTitle} mb-4`}>Record Payment</h2>
             {paymentFormError && <div className={dash.errorBanner}>{paymentFormError}</div>}
             <form onSubmit={handleRecordPayment} className="space-y-3">
-              <div>
-                <label className={dash.label}>Student</label>
-                <select
-                  value={paymentForm.studentId}
-                  onChange={e => setPaymentForm(f => ({ ...f, studentId: e.target.value }))}
-                  required
-                  className={dash.selectFull}
-                >
-                  <option value="">Select student</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>{s.user.firstName} {s.user.lastName} ({s.rollNumber})</option>
-                  ))}
-                </select>
+              <div className="flex gap-4 text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="payer"
+                    checked={paymentForm.payer === "student"}
+                    onChange={() => setPaymentForm(f => ({ ...f, payer: "student" }))}
+                  />
+                  Enrolled student
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="payer"
+                    checked={paymentForm.payer === "applicant"}
+                    onChange={() => setPaymentForm(f => ({ ...f, payer: "applicant" }))}
+                  />
+                  Applicant (no profile yet)
+                </label>
               </div>
+              {paymentForm.payer === "student" ? (
+                <div>
+                  <label className={dash.label}>Student</label>
+                  <select
+                    value={paymentForm.studentId}
+                    onChange={e => setPaymentForm(f => ({ ...f, studentId: e.target.value }))}
+                    required={paymentForm.payer === "student"}
+                    className={dash.selectFull}
+                  >
+                    <option value="">Select student</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.user.firstName} {s.user.lastName} ({s.rollNumber})</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className={dash.label}>Applicant user</label>
+                  <select
+                    value={paymentForm.applicantUserId}
+                    onChange={e => setPaymentForm(f => ({ ...f, applicantUserId: e.target.value }))}
+                    required={paymentForm.payer === "applicant"}
+                    className={dash.selectFull}
+                  >
+                    <option value="">Select applicant</option>
+                    {applicantUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.firstName} {u.lastName} — {u.email}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className={dash.label}>Fee Structure</label>
                 <select

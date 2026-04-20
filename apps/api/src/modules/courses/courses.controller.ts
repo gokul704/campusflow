@@ -17,6 +17,32 @@ const updateSchema = z.object({
   departmentId: z.string().nullable().optional(),
 });
 
+const bulkCourseRow = z.object({
+  name: z.string().min(2),
+  code: z.string().min(2).max(15),
+  credits: z.coerce.number().int().min(0).max(30),
+  isCommon: z.coerce.boolean().optional(),
+  departmentId: z.string().optional().nullable(),
+  departmentCode: z.string().optional().nullable(),
+  departmentName: z.string().optional().nullable(),
+});
+const bulkCoursesSchema = z.object({
+  rows: z.array(bulkCourseRow).min(1).max(500),
+});
+
+export async function bulkCreateCoursesHandler(req: Request, res: Response): Promise<void> {
+  const r = bulkCoursesSchema.safeParse(req.body);
+  if (!r.success) {
+    res.status(400).json({ error: r.error.flatten() });
+    return;
+  }
+  try {
+    res.status(201).json(await svc.bulkCreateCourses(req.tenant.id, r.data.rows));
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
 export async function listCoursesHandler(req: Request, res: Response): Promise<void> {
   res.json(await svc.listCourses(req.tenant.id, req.query.departmentId as string));
 }

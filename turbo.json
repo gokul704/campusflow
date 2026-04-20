@@ -12,6 +12,7 @@
         "PORT",
         "JWT_SECRET",
         "JWT_EXPIRES_IN",
+        "DEFAULT_NEW_USER_PASSWORD",
         "UPSTASH_REDIS_REST_URL",
         "UPSTASH_REDIS_REST_TOKEN",
         "RESEND_API_KEY",
@@ -32,7 +33,9 @@
         "ZOOM_CLIENT_SECRET",
         "NEXT_PUBLIC_API_URL",
         "NEXT_PUBLIC_APP_DOMAIN",
-        "NEXT_PUBLIC_TENANT_KEY"
+        "NEXT_PUBLIC_TENANT_KEY",
+        "SINGLE_TENANT_SLUG",
+        "SINGLE_TENANT_ID"
       ],
       "inputs": [
         "$TURBO_DEFAULT$",

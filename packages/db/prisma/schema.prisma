@@ -9,7 +9,7 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────
-// TENANT (Institute)
+// TENANT (Institute) — one row per deployment is typical; API resolves via SINGLE_TENANT_SLUG or auto when alone.
 // ─────────────────────────────────────────────
 
 model Tenant {
@@ -21,6 +21,8 @@ model Tenant {
   logoUrl     String?
   isActive    Boolean  @default(true)
   plan        Plan     @default(STARTER)
+  /// Per-tenant RBAC overrides (JSON). When null, server defaults apply.
+  accessMatrix Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -57,8 +59,13 @@ model User {
   lastName   String
   dateOfBirth DateTime? @db.Date
   avatarUrl  String?
-  role       Role      @default(STUDENT)
+  role       Role      @default(PRESENT_STUDENT)
   isActive   Boolean   @default(true)
+  /// Manual lock (finance / admin); combined with overdue fees for effective portal restriction.
+  portalAccessRestricted Boolean @default(false)
+  portalRestrictionReason String?
+  feeAccessOverrideUntil DateTime?
+  feeAccessOverrideByUserId String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -66,8 +73,11 @@ model User {
   student       Student?
   faculty       Faculty?
   sessions      Session[]
-  parentLinks   ParentStudent[] @relation("ParentUser")
   notifications Notification[]
+  applicantFeePayments FeePayment[] @relation("ApplicantFeePayments")
+  feeAccessOverridesGranted User[] @relation("FeeAccessGrantedBy")
+
+  feeAccessOverrideBy User? @relation("FeeAccessGrantedBy", fields: [feeAccessOverrideByUserId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -75,11 +85,16 @@ model User {
 }
 
 enum Role {
-  SUPER_ADMIN
   ADMIN
-  FACULTY
-  STUDENT
-  PARENT
+  CMD
+  PRINCIPAL
+  STAFF
+  OPERATIONS_LECTURER
+  OPERATIONS_HR
+  OPERATIONS_FRONT_DESK
+  PRESENT_STUDENT
+  ALUMNI
+  GUEST_STUDENT
 }
 
 model Session {
@@ -221,7 +236,6 @@ model Student {
   section      Section         @relation(fields: [sectionId], references: [id])
   attendances  Attendance[]
   feePayments  FeePayment[]
-  parents      ParentStudent[]
   examGrades   ExamGrade[]
 
   @@unique([tenantId, rollNumber])
@@ -245,21 +259,6 @@ model Faculty {
 
   @@index([tenantId])
   @@map("faculty")
-}
-
-// Links a PARENT user to one or more students
-model ParentStudent {
-  id        String   @id @default(cuid())
-  tenantId  String
-  parentId  String   // User with role PARENT
-  studentId String
-
-  parent    User     @relation("ParentUser", fields: [parentId], references: [id])
-  student   Student  @relation(fields: [studentId], references: [id])
-
-  @@unique([parentId, studentId])
-  @@index([tenantId])
-  @@map("parent_students")
 }
 
 // ─────────────────────────────────────────────
@@ -434,6 +433,8 @@ model FeeStructure {
   amount      Float
   dueDate     DateTime
   isRecurring Boolean  @default(false)
+  /// When true, a PAID payment against this structure (as applicant fee) unlocks student profile creation.
+  isAdmissionFee Boolean @default(false)
   createdAt   DateTime @default(now())
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
@@ -446,7 +447,10 @@ model FeeStructure {
 model FeePayment {
   id                String        @id @default(cuid())
   tenantId          String
-  studentId         String
+  /// Set when the student profile exists.
+  studentId         String?
+  /// Fee recorded for a student-role user before a Student row exists (e.g. admission).
+  applicantUserId   String?
   feeStructureId    String
   amount            Float
   status            PaymentStatus @default(PENDING)
@@ -455,10 +459,12 @@ model FeePayment {
   paidAt            DateTime?
   createdAt         DateTime      @default(now())
 
-  student        Student      @relation(fields: [studentId], references: [id])
+  student        Student?     @relation(fields: [studentId], references: [id])
+  applicantUser  User?        @relation("ApplicantFeePayments", fields: [applicantUserId], references: [id])
   feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id])
 
   @@index([tenantId])
+  @@index([applicantUserId])
   @@map("fee_payments")
 }
 

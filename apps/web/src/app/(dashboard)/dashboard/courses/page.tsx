@@ -1,7 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { authFetch, formatApiError } from "@/lib/api";
+import {
+  alertBulkImportSummary,
+  downloadExcelTemplate,
+  excelCell,
+  normalizeCourseCode,
+  parseYesNoCell,
+  readExcelFirstSheet,
+} from "@/lib/excelImport";
+import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
 interface Course {
@@ -9,12 +19,51 @@ interface Course {
   name: string;
   code: string;
   credits: number;
-  semester: number;
-  department: { name: string; code: string };
-  _count: { enrollments: number };
+  department: { name: string; code: string } | null;
+  _count?: { batchCourses?: number };
 }
 
 interface Department { id: string; name: string; code: string; }
+
+type CourseImportRow = {
+  name: string;
+  code: string;
+  credits: number;
+  isCommon?: boolean;
+  departmentId?: string;
+  departmentCode?: string;
+  departmentName?: string;
+};
+
+function courseRowFromExcel(r: Record<string, unknown>): CourseImportRow | null {
+  const name = excelCell(r, "name", "course name", "subject", "paper", "paper title", "title");
+  const codeRaw = excelCell(
+    r,
+    "code",
+    "course code",
+    "subjectcode",
+    "subject code",
+    "papercode",
+    "paper code",
+    "scode",
+    "s code"
+  );
+  const code = normalizeCourseCode(codeRaw);
+  if (!name && !code) return null;
+  const creditsRaw = excelCell(r, "credits", "credit");
+  const creditsN = Number(creditsRaw);
+  const credits = Number.isFinite(creditsN) && creditsRaw !== "" ? creditsN : 3;
+  const isCommon = parseYesNoCell(excelCell(r, "iscommon", "common", "shared"));
+  return {
+    name,
+    code,
+    credits,
+    isCommon,
+    departmentId: excelCell(r, "departmentid", "department id") || undefined,
+    departmentCode: excelCell(r, "departmentcode", "department code", "dept code") || undefined,
+    departmentName: excelCell(r, "departmentname", "department name", "dept name") || undefined,
+  };
+}
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -22,9 +71,15 @@ export default function CoursesPage() {
   const [filterDept, setFilterDept] = useState("");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", code: "", departmentId: "", credits: "3", semester: "1" });
+  const [form, setForm] = useState({ name: "", code: "", departmentId: "", credits: "3" });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
+
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<CourseImportRow[]>([]);
+  const [importParseError, setImportParseError] = useState("");
+  const [importSubmitError, setImportSubmitError] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
 
   async function fetchCourses() {
     setLoading(true);
@@ -48,12 +103,17 @@ export default function CoursesPage() {
     try {
       const res = await authFetch("/api/courses", {
         method: "POST",
-        body: JSON.stringify({ ...form, credits: Number(form.credits), semester: Number(form.semester) }),
+        body: JSON.stringify({
+          name: form.name.trim(),
+          code: form.code.trim(),
+          departmentId: form.departmentId || undefined,
+          credits: Number(form.credits),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setFormError(data.error ?? "Failed"); return; }
       setShowForm(false);
-      setForm({ name: "", code: "", departmentId: "", credits: "3", semester: "1" });
+      setForm({ name: "", code: "", departmentId: "", credits: "3" });
       fetchCourses();
     } catch { setFormError("Something went wrong"); }
     finally { setFormLoading(false); }
@@ -67,14 +127,121 @@ export default function CoursesPage() {
     fetchCourses();
   }
 
+  function openImport() {
+    setImportRows([]);
+    setImportParseError("");
+    setImportSubmitError("");
+    setShowImport(true);
+  }
+
+  async function handleExcelFile(file: File) {
+    setImportParseError("");
+    try {
+      const raw = await readExcelFirstSheet(file);
+      const rows: CourseImportRow[] = [];
+      for (const row of raw) {
+        const parsed = courseRowFromExcel(row);
+        if (!parsed) continue;
+        if (!parsed.name || !parsed.code) {
+          setImportParseError('Each row needs a Subject (or "Name") and a paper Code (e.g. S. code / "B 4.1").');
+          return;
+        }
+        const common = parsed.isCommon === true;
+        if (!common && !parsed.departmentId && !parsed.departmentCode && !parsed.departmentName) {
+          setImportParseError(
+            `For "${parsed.code}": add Department Code or Name, or set Is Common to Y (shared course).`
+          );
+          return;
+        }
+        rows.push(parsed);
+      }
+      if (rows.length === 0) {
+        setImportParseError("No data rows found.");
+        return;
+      }
+      setImportRows(rows);
+    } catch {
+      setImportParseError("Could not read the Excel file.");
+    }
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setImportSubmitError("");
+    if (importRows.length === 0) {
+      setImportSubmitError("Parse an Excel file first.");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const res = await authFetch("/api/courses/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          rows: importRows.map((r) => ({
+            name: r.name.trim(),
+            code: r.code.trim(),
+            credits: r.credits,
+            isCommon: r.isCommon ?? false,
+            departmentId: r.departmentId?.trim() || null,
+            departmentCode: r.departmentCode?.trim() || null,
+            departmentName: r.departmentName?.trim() || null,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportSubmitError(formatApiError(data));
+        return;
+      }
+      setShowImport(false);
+      void fetchCourses();
+      alertBulkImportSummary(data.created ?? 0, data.failed ?? []);
+    } catch {
+      setImportSubmitError("Request failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Courses</h1>
-        <button type="button" onClick={() => setShowForm(true)} className={dash.btnPrimary}>
-          + Add Course
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              downloadExcelTemplate("courses-import-template.xlsx", "Courses", [
+                "S. code / Paper code",
+                "Subject",
+                "Credits",
+                "Department Code",
+                "Is Common (Y/N)",
+              ])
+            }
+            className={dash.btnSecondary}
+          >
+            Download Excel template
+          </button>
+          <button type="button" onClick={openImport} className={dash.btnSecondary}>
+            Import Excel
+          </button>
+          <button type="button" onClick={() => setShowForm(true)} className={dash.btnPrimary}>
+            + Add Course
+          </button>
+        </div>
       </div>
+
+      <p className="mb-3 max-w-3xl text-xs text-gray-500 dark:text-gray-400">
+        Teaching schedules (subject code + title + faculty) are easiest as: import <strong>courses</strong> from this page, then{" "}
+        <strong>faculty</strong> (with emails), then <strong>batch courses</strong> to link each paper to a batch/section/semester. Academic
+        Paper codes like <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">Aud 201M</code> normalize to{" "}
+        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">AUD201M</code> to match the catalogue. Academic milestone dates go under{" "}
+        <Link href="/dashboard/events" className="font-medium text-blue-600 underline hover:text-blue-800 dark:text-blue-400">
+          Events
+        </Link>{" "}
+        (Excel there accepts DD.MM.YYYY).
+      </p>
 
       <div className="mb-4">
         <select
@@ -94,25 +261,23 @@ export default function CoursesPage() {
               <th className={dash.th}>Code</th>
               <th className={dash.th}>Name</th>
               <th className={dash.th}>Department</th>
-              <th className={dash.th}>Semester</th>
               <th className={dash.th}>Credits</th>
-              <th className={dash.th}>Students</th>
+              <th className={dash.th}>Batch links</th>
               <th className={dash.th}>Actions</th>
             </tr>
           </thead>
           <tbody className={dash.tbodyDivide}>
             {loading ? (
-              <tr><td colSpan={7} className={dash.emptyCell}>Loading...</td></tr>
+              <tr><td colSpan={6} className={dash.emptyCell}>Loading...</td></tr>
             ) : courses.length === 0 ? (
-              <tr><td colSpan={7} className={dash.emptyCell}>No courses yet</td></tr>
+              <tr><td colSpan={6} className={dash.emptyCell}>No courses yet</td></tr>
             ) : courses.map((c) => (
               <tr key={c.id} className={dash.rowHover}>
                 <td className={`px-4 py-3 ${dash.cellMono}`}>{c.code}</td>
                 <td className={`px-4 py-3 ${dash.cellStrong}`}>{c.name}</td>
-                <td className={`px-4 py-3 ${dash.cellMuted}`}>{c.department?.name}</td>
-                <td className={`px-4 py-3 ${dash.cellMuted}`}>Sem {c.semester}</td>
+                <td className={`px-4 py-3 ${dash.cellMuted}`}>{c.department?.name ?? "—"}</td>
                 <td className={`px-4 py-3 ${dash.cellMuted}`}>{c.credits}</td>
-                <td className={`px-4 py-3 ${dash.cellMuted}`}>{c._count?.enrollments}</td>
+                <td className={`px-4 py-3 ${dash.cellMuted}`}>{c._count?.batchCourses ?? 0}</td>
                 <td className="px-4 py-3">
                   <button type="button" onClick={() => handleDelete(c.id)} className={dash.btnDanger}>Delete</button>
                 </td>
@@ -146,17 +311,10 @@ export default function CoursesPage() {
                   {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={dash.label}>Semester</label>
-                  <input type="number" min={1} max={12} value={form.semester} onChange={e => setForm(f => ({ ...f, semester: e.target.value }))} required
-                    className={dash.input} />
-                </div>
-                <div>
-                  <label className={dash.label}>Credits</label>
-                  <input type="number" min={0} max={10} value={form.credits} onChange={e => setForm(f => ({ ...f, credits: e.target.value }))} required
-                    className={dash.input} />
-                </div>
+              <div>
+                <label className={dash.label}>Credits</label>
+                <input type="number" min={0} max={10} value={form.credits} onChange={e => setForm(f => ({ ...f, credits: e.target.value }))} required
+                  className={dash.input} />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className={`flex-1 ${dash.btnSecondary}`}>Cancel</button>
@@ -164,6 +322,43 @@ export default function CoursesPage() {
                   {formLoading ? "Saving..." : "Save"}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showImport && (
+        <div className={dash.modalOverlay}>
+          <div className={`${dash.modalPanel} max-w-lg`}>
+            <h2 className={`${dash.sectionTitle} mb-4`}>Import courses</h2>
+            <BulkImportOrderHint className="mb-3" />
+            <p className={`mb-3 text-xs ${dash.cellMuted}`}>
+              Prospectus-style tables map easily: <strong>Subject</strong> → course name, <strong>S. code / Paper code</strong> → code
+              (spaces removed, e.g. <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">B 4.1</code> becomes{" "}
+              <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">B4.1</code>). Credits default to <strong>3</strong> if left blank.
+              Use <strong>Department Code</strong> or set <strong>Is Common</strong> to Y for shared papers.
+            </p>
+            {importParseError && <div className={dash.errorBanner}>{importParseError}</div>}
+            {importSubmitError && <div className={dash.errorBanner}>{importSubmitError}</div>}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="mb-3 block w-full text-sm"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleExcelFile(f);
+              }}
+            />
+            {importRows.length > 0 && (
+              <p className={`mb-3 text-sm ${dash.cellMuted}`}>{importRows.length} row(s) ready to import.</p>
+            )}
+            <form onSubmit={handleBulkSubmit} className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowImport(false)} className={`flex-1 ${dash.btnSecondary}`}>
+                Cancel
+              </button>
+              <button type="submit" disabled={importLoading || importRows.length === 0} className={`flex-1 ${dash.btnPrimary}`}>
+                {importLoading ? "Importing…" : "Import"}
+              </button>
             </form>
           </div>
         </div>

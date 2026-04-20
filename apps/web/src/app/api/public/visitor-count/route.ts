@@ -9,6 +9,9 @@ const MISH_LANDING_COUNTER_ID = "mish-public-landing";
  * Returns { count: null } if the database is unavailable so the client can hide the stat.
  */
 export async function POST() {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return NextResponse.json({ count: null as number | null }, { status: 200 });
+  }
   try {
     const row = await prisma.siteCounter.upsert({
       where: { id: MISH_LANDING_COUNTER_ID },

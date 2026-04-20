@@ -26,6 +26,8 @@ import eventsRoutes from "./modules/events/events.routes";
 import examGradesRoutes from "./modules/exam-grades/exam-grades.routes";
 import notificationsRoutes from "./modules/notifications/notifications.routes";
 import sectionsRoutes from "./modules/sections/sections.routes";
+import searchRoutes from "./modules/search/search.routes";
+import tenantRoutes from "./modules/tenant/tenant.routes";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -93,6 +95,8 @@ app.use("/api/events", eventsRoutes);
 app.use("/api/exam-grades", examGradesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/sections", sectionsRoutes);
+app.use("/api/search", searchRoutes);
+app.use("/api/tenant", tenantRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/health", (_, res) => {
@@ -106,5 +110,5 @@ app.use((_, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`🚀 CampusFlow API running on http://localhost:${PORT}`);
+  console.log(`🚀 MAA Education portal API running on http://localhost:${PORT}`);
 });

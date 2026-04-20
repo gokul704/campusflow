@@ -10,7 +10,7 @@ export async function listFeeStructures(tenantId: string) {
 
 export async function createFeeStructure(
   tenantId: string,
-  data: { name: string; amount: number; dueDate: string; isRecurring?: boolean }
+  data: { name: string; amount: number; dueDate: string; isRecurring?: boolean; isAdmissionFee?: boolean }
 ) {
   return prisma.feeStructure.create({
     data: {
@@ -19,6 +19,7 @@ export async function createFeeStructure(
       amount: data.amount,
       dueDate: new Date(data.dueDate),
       isRecurring: data.isRecurring ?? false,
+      isAdmissionFee: data.isAdmissionFee ?? false,
     },
   });
 }
@@ -26,7 +27,7 @@ export async function createFeeStructure(
 export async function updateFeeStructure(
   tenantId: string,
   id: string,
-  data: { name?: string; amount?: number; dueDate?: string; isRecurring?: boolean }
+  data: { name?: string; amount?: number; dueDate?: string; isRecurring?: boolean; isAdmissionFee?: boolean }
 ) {
   const record = await prisma.feeStructure.findFirst({ where: { id, tenantId } });
   if (!record) throw new Error("Fee structure not found");
@@ -55,12 +56,25 @@ export async function deleteFeeStructure(tenantId: string, id: string) {
 
 export async function getFeePayments(
   tenantId: string,
-  filters: { studentId?: string; feeStructureId?: string; status?: PaymentStatus }
+  filters: { studentId?: string; feeStructureId?: string; status?: PaymentStatus },
+  opts?: { restrictToStudentUserId?: string }
 ) {
+  let studentScope: { studentId?: string; applicantUserId?: string } | undefined;
+  if (opts?.restrictToStudentUserId) {
+    const st = await prisma.student.findFirst({
+      where: { tenantId, userId: opts.restrictToStudentUserId },
+      select: { id: true },
+    });
+    studentScope = st
+      ? { studentId: st.id }
+      : { applicantUserId: opts.restrictToStudentUserId };
+  }
+
   return prisma.feePayment.findMany({
     where: {
       tenantId,
-      ...(filters.studentId ? { studentId: filters.studentId } : {}),
+      ...(studentScope ?? {}),
+      ...(!studentScope && filters.studentId ? { studentId: filters.studentId } : {}),
       ...(filters.feeStructureId ? { feeStructureId: filters.feeStructureId } : {}),
       ...(filters.status ? { status: filters.status } : {}),
     },
@@ -70,6 +84,7 @@ export async function getFeePayments(
           user: { select: { firstName: true, lastName: true, email: true } },
         },
       },
+      applicantUser: { select: { firstName: true, lastName: true, email: true } },
       feeStructure: { select: { name: true, amount: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -78,17 +93,34 @@ export async function getFeePayments(
 
 export async function createFeePayment(
   tenantId: string,
-  data: { studentId: string; feeStructureId: string }
+  data: { feeStructureId: string; studentId?: string; applicantUserId?: string }
 ) {
+  if (Boolean(data.studentId) === Boolean(data.applicantUserId)) {
+    throw new Error("Provide exactly one of studentId or applicantUserId");
+  }
+
   const feeStructure = await prisma.feeStructure.findFirst({
     where: { id: data.feeStructureId, tenantId },
   });
   if (!feeStructure) throw new Error("Fee structure not found");
 
+  if (data.studentId) {
+    const st = await prisma.student.findFirst({ where: { id: data.studentId, tenantId } });
+    if (!st) throw new Error("Student not found");
+  } else if (data.applicantUserId) {
+    const u = await prisma.user.findFirst({
+      where: { id: data.applicantUserId, tenantId, role: "PRESENT_STUDENT" },
+      include: { student: true },
+    });
+    if (!u) throw new Error("Applicant user not found");
+    if (u.student) throw new Error("User already has a student profile — record payment against the student instead.");
+  }
+
   return prisma.feePayment.create({
     data: {
       tenantId,
-      studentId: data.studentId,
+      studentId: data.studentId ?? null,
+      applicantUserId: data.applicantUserId ?? null,
       feeStructureId: data.feeStructureId,
       amount: feeStructure.amount,
       status: "PENDING",
@@ -99,6 +131,7 @@ export async function createFeePayment(
           user: { select: { firstName: true, lastName: true, email: true } },
         },
       },
+      applicantUser: { select: { firstName: true, lastName: true, email: true } },
       feeStructure: { select: { name: true, amount: true } },
     },
   });

@@ -13,6 +13,37 @@ const bulkMarkSchema = z.object({
   ),
 });
 
+const bulkImportAttendanceRow = z.object({
+  batchCourseId: z.string().optional().nullable(),
+  batchId: z.string().optional().nullable(),
+  sectionId: z.string().optional().nullable(),
+  batchName: z.string().optional().nullable(),
+  sectionName: z.string().optional().nullable(),
+  courseCode: z.string().optional().nullable(),
+  courseId: z.string().optional().nullable(),
+  semester: z.coerce.number().int().min(1).max(20).optional().nullable(),
+  date: z.string(),
+  rollNumber: z.string().optional().nullable(),
+  studentEmail: z.string().optional().nullable(),
+  status: z.string(),
+});
+const bulkImportAttendanceSchema = z.object({
+  rows: z.array(bulkImportAttendanceRow).min(1).max(2000),
+});
+
+export async function bulkImportAttendanceHandler(req: Request, res: Response): Promise<void> {
+  const r = bulkImportAttendanceSchema.safeParse(req.body);
+  if (!r.success) {
+    res.status(400).json({ error: r.error.flatten() });
+    return;
+  }
+  try {
+    res.status(201).json(await svc.bulkImportAttendanceRows(req.tenant.id, r.data.rows));
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
 export async function getAttendanceHandler(req: Request, res: Response): Promise<void> {
   try {
     const { batchCourseId, studentId, startDate, endDate } = req.query as Record<string, string | undefined>;

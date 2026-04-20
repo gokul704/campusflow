@@ -15,6 +15,39 @@ const updateSchema = z.object({
   qualification: z.string().optional(),
 });
 
+const createWithUserSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  password: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  designation: z.string().min(2),
+  qualification: z.string().optional().nullable(),
+  departmentId: z.string().optional().nullable(),
+  departmentCode: z.string().optional().nullable(),
+  departmentName: z.string().optional().nullable(),
+});
+
+const bulkFacultySchema = z.object({
+  rows: z.array(createWithUserSchema).min(1).max(500),
+  defaultPassword: z.string().optional(),
+});
+
+export async function bulkCreateFacultyHandler(req: Request, res: Response): Promise<void> {
+  const r = bulkFacultySchema.safeParse(req.body);
+  if (!r.success) {
+    res.status(400).json({ error: r.error.flatten() });
+    return;
+  }
+  try {
+    res.status(201).json(
+      await svc.bulkCreateFacultyWithUsers(req.tenant.id, r.data.rows, r.data.defaultPassword)
+    );
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
 export async function listFacultyHandler(req: Request, res: Response): Promise<void> {
   const { departmentId, search, page, limit } = req.query;
   res.json(await svc.listFaculty(

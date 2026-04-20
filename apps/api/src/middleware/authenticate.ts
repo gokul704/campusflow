@@ -7,6 +7,8 @@ interface JwtPayload {
   tenantId: string;
   email: string;
   role: Role;
+  firstName?: string;
+  lastName?: string;
 }
 
 export function authenticate(
@@ -35,6 +37,8 @@ export function authenticate(
       tenantId: payload.tenantId,
       email: payload.email,
       role: payload.role,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
     };
 
     next();

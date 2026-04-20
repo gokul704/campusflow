@@ -23,6 +23,25 @@ interface FeeReportData {
   structuresCount: number;
 }
 
+async function downloadCsv(path: string, fallbackName: string) {
+  const res = await authFetch(path);
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    alert(typeof d?.error === "string" ? d.error : "Download failed");
+    return;
+  }
+  const blob = await res.blob();
+  const cd = res.headers.get("Content-Disposition");
+  const m = cd?.match(/filename="([^"]+)"/);
+  const name = m?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 interface BatchCourseOption {
   id: string;
   semester: number;
@@ -84,7 +103,15 @@ export default function ReportsPage() {
     // Auto-load fee report
     authFetch("/api/reports/fees")
       .then(r => r.json())
-      .then(d => { setFeeReport(d); setLoadingFees(false); })
+      .then((d: Record<string, unknown>) => {
+        setFeeReport({
+          totalStudents: Number(d.totalStudents ?? 0),
+          totalPaid: Number(d.totalPaidAmount ?? 0),
+          pendingCount: Number(d.pendingCount ?? 0),
+          structuresCount: Number(d.totalStructures ?? 0),
+        });
+        setLoadingFees(false);
+      })
       .catch(() => setLoadingFees(false));
   }, []);
 
@@ -141,6 +168,94 @@ export default function ReportsPage() {
       </div>
 
       <div className="space-y-10">
+        <section>
+          <h2 className={`${dash.sectionTitle} mb-4`}>CSV exports</h2>
+          <p className={`mb-3 text-sm ${dash.cellMuted}`}>
+            Leadership can export fee payment rows. Other exports require Reports access and, where noted, a batch course selection.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={dash.btnSecondary}
+              onClick={() => void downloadCsv("/api/reports/export?type=fees&format=csv", "fees.csv")}
+            >
+              Fees (leadership)
+            </button>
+            <button
+              type="button"
+              className={dash.btnSecondary}
+              onClick={() => void downloadCsv("/api/reports/export?type=attendance&format=csv", "attendance.csv")}
+            >
+              Attendance summary
+            </button>
+            <button
+              type="button"
+              className={dash.btnSecondary}
+              onClick={() => void downloadCsv("/api/reports/export?type=timetable&format=csv", "timetable.csv")}
+            >
+              Timetable (all)
+            </button>
+            <button
+              type="button"
+              className={dash.btnSecondary}
+              onClick={() =>
+                attendanceBcId
+                  ? void downloadCsv(
+                      `/api/reports/export?type=assignments&format=csv&batchCourseId=${encodeURIComponent(attendanceBcId)}`,
+                      "assignments.csv"
+                    )
+                  : alert("Select a batch course in Attendance Report first (same list applies).")
+              }
+            >
+              Assignments (uses batch course below)
+            </button>
+            <button
+              type="button"
+              className={dash.btnSecondary}
+              onClick={() =>
+                gradeBcId
+                  ? void downloadCsv(
+                      `/api/reports/export?type=exams&format=csv&batchCourseId=${encodeURIComponent(gradeBcId)}`,
+                      "exams.csv"
+                    )
+                  : alert("Select a batch course in Grade Report first.")
+              }
+            >
+              Exam grades (uses grade batch course)
+            </button>
+            <button
+              type="button"
+              className={dash.btnSecondary}
+              onClick={() => void downloadCsv("/api/reports/export?type=general&format=csv", "general.csv")}
+            >
+              General stats
+            </button>
+            <button
+              type="button"
+              className={dash.btnSecondary}
+              onClick={async () => {
+                const res = await authFetch("/api/reports/timetable/conflicts");
+                const d = await res.json();
+                if (!res.ok) {
+                  alert(typeof d?.error === "string" ? d.error : "Failed");
+                  return;
+                }
+                const lines = [["kind", "message"], ...(d.conflicts ?? []).map((c: { kind: string; message: string }) => [c.kind, c.message])];
+                const csv = lines.map((row: string[]) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "timetable-conflicts.csv";
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              Timetable conflicts (JSON → CSV)
+            </button>
+          </div>
+        </section>
+
         <section>
           <h2 className={`${dash.sectionTitle} mb-4`}>Fee Report</h2>
           {loadingFees ? (

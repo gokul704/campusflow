@@ -1,4 +1,15 @@
 import { prisma, Role } from "@campusflow/db";
+import { hashPassword } from "../auth/auth.service";
+
+async function resolveNewUserPasswordForCreate(plain?: string | null): Promise<string> {
+  const p = plain?.trim() || process.env.DEFAULT_NEW_USER_PASSWORD?.trim();
+  if (!p || p.length < 8) {
+    throw new Error(
+      "Set DEFAULT_NEW_USER_PASSWORD in .env (min 8 characters) or pass an explicit password."
+    );
+  }
+  return hashPassword(p);
+}
 
 export interface ListUsersOptions {
   tenantId: string;
@@ -16,7 +27,7 @@ export async function listUsers(opts: ListUsersOptions) {
 
   const where: Record<string, unknown> = { tenantId: opts.tenantId };
   if (opts.role) where.role = opts.role;
-  if (opts.departmentId) where.departmentId = opts.departmentId;
+  if (opts.departmentId) where.faculty = { departmentId: opts.departmentId };
   if (opts.search) {
     where.OR = [
       { firstName: { contains: opts.search, mode: "insensitive" } },
@@ -105,5 +116,78 @@ export async function setUserActive(tenantId: string, userId: string, isActive: 
     where: { id: userId },
     data: { isActive },
     select: { id: true, isActive: true },
+  });
+}
+
+/** Creates an active user immediately (no invite). Students must use POST /students. */
+export async function createDirectUser(
+  tenantId: string,
+  data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: Role;
+    password?: string | null;
+    phone?: string | null;
+    departmentId?: string | null;
+    designation?: string | null;
+    qualification?: string | null;
+  }
+) {
+  if (data.role === Role.PRESENT_STUDENT) {
+    throw new Error("Use the Students page to create student accounts (user + profile together).");
+  }
+
+  const email = data.email.trim().toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { tenantId_email: { tenantId, email } } });
+  if (existing) throw new Error("User with this email already exists");
+
+  const hashed = await resolveNewUserPasswordForCreate(data.password);
+
+  if (data.role === Role.OPERATIONS_LECTURER) {
+    const deptId = data.departmentId?.trim();
+    const des = data.designation?.trim();
+    if (!deptId) throw new Error("departmentId is required for Operations — Lecturer.");
+    if (!des) throw new Error("designation is required for Operations — Lecturer.");
+    const dept = await prisma.department.findFirst({ where: { id: deptId, tenantId } });
+    if (!dept) throw new Error("Department not found.");
+
+    return prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          tenantId,
+          email,
+          password: hashed,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          role: data.role,
+          phone: data.phone?.trim() || null,
+        },
+        select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
+      });
+      await tx.faculty.create({
+        data: {
+          userId: user.id,
+          tenantId,
+          departmentId: deptId,
+          designation: des,
+          qualification: data.qualification?.trim() || null,
+        },
+      });
+      return user;
+    });
+  }
+
+  return prisma.user.create({
+    data: {
+      tenantId,
+      email,
+      password: hashed,
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      role: data.role,
+      phone: data.phone?.trim() || null,
+    },
+    select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
   });
 }

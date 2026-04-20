@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { authFetch, formatApiError } from "@/lib/api";
+import {
+  alertBulkImportSummary,
+  downloadExcelTemplate,
+  excelCell,
+  normHeader,
+  readExcelFirstSheet,
+} from "@/lib/excelImport";
+import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
 interface TimetableSlot {
@@ -28,6 +36,71 @@ interface BatchCourseOption {
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+function rawCell(row: Record<string, unknown>, ...aliases: string[]): unknown {
+  const targets = aliases.map((a) => normHeader(a));
+  for (const [k, v] of Object.entries(row)) {
+    if (targets.includes(normHeader(String(k)))) return v;
+  }
+  return undefined;
+}
+
+function excelTimeCell(v: unknown): string {
+  if (typeof v === "number" && Number.isFinite(v)) {
+    const frac = v % 1;
+    if (frac > 0 || (v > 0 && v < 1)) {
+      const totalMinutes = Math.round(frac * 24 * 60);
+      const h = Math.floor(totalMinutes / 60) % 24;
+      const m = totalMinutes % 60;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+  }
+  return String(v ?? "").trim();
+}
+
+type TimetableImportRow = {
+  batchCourseId?: string;
+  batchName?: string;
+  sectionName?: string;
+  courseCode?: string;
+  courseId?: string;
+  semester?: number;
+  dayOfWeek: string | number;
+  startTime: string;
+  endTime: string;
+  room?: string;
+};
+
+function timetableRowFromExcel(r: Record<string, unknown>): TimetableImportRow | null {
+  const batchCourseId = excelCell(r, "batchcourseid", "batch course id", "batch_course_id");
+  const batchName = excelCell(r, "batchname", "batch name", "batch") || undefined;
+  const sectionName = excelCell(r, "sectionname", "section name", "section", "sec") || undefined;
+  const courseCode = excelCell(r, "coursecode", "course code", "code") || undefined;
+  const courseId = excelCell(r, "courseid", "course id") || undefined;
+  const semRaw = excelCell(r, "semester", "sem");
+  const semester = semRaw ? Number(semRaw) : undefined;
+  const dayCell = rawCell(r, "dayofweek", "day", "dow", "weekday");
+  const dayRaw =
+    dayCell !== undefined && dayCell !== "" && dayCell != null ? dayCell : excelCell(r, "dayofweek", "day", "dow", "weekday");
+  const dayOfWeek: string | number =
+    typeof dayRaw === "number" || typeof dayRaw === "string" ? dayRaw : String(dayRaw ?? "");
+  const startTime = excelTimeCell(rawCell(r, "start time", "starttime", "start"));
+  const endTime = excelTimeCell(rawCell(r, "end time", "endtime", "end"));
+  const room = excelCell(r, "room", "venue", "hall") || undefined;
+  if (!batchCourseId && !batchName && !courseCode && !courseId) return null;
+  return {
+    batchCourseId: batchCourseId || undefined,
+    batchName,
+    sectionName,
+    courseCode,
+    courseId,
+    semester: semester != null && Number.isFinite(semester) ? semester : undefined,
+    dayOfWeek,
+    startTime,
+    endTime,
+    room,
+  };
+}
+
 export default function TimetablePage() {
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [batches, setBatches] = useState<BatchItem[]>([]);
@@ -45,6 +118,12 @@ export default function TimetablePage() {
   });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
+
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<TimetableImportRow[]>([]);
+  const [importParseError, setImportParseError] = useState("");
+  const [importSubmitError, setImportSubmitError] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
 
   async function fetchSlots() {
     setLoading(true);
@@ -116,13 +195,103 @@ export default function TimetablePage() {
     fetchSlots();
   }
 
+  function openImport() {
+    setImportRows([]);
+    setImportParseError("");
+    setImportSubmitError("");
+    setShowImport(true);
+  }
+
+  async function handleExcelFile(file: File) {
+    setImportParseError("");
+    try {
+      const raw = await readExcelFirstSheet(file);
+      const rows: TimetableImportRow[] = [];
+      for (const row of raw) {
+        const parsed = timetableRowFromExcel(row);
+        if (!parsed) continue;
+        const byBc = !!parsed.batchCourseId;
+        const byParts =
+          parsed.batchName &&
+          parsed.sectionName &&
+          (parsed.courseCode || parsed.courseId) &&
+          parsed.semester != null;
+        if (!byBc && !byParts) {
+          setImportParseError(
+            "Each row needs either Batch Course ID, or (Batch Name + Section Name + Course Code + Semester)."
+          );
+          return;
+        }
+        const dowOk =
+          parsed.dayOfWeek === 0 ||
+          parsed.dayOfWeek === "0" ||
+          (typeof parsed.dayOfWeek === "string" && parsed.dayOfWeek.trim() !== "") ||
+          (typeof parsed.dayOfWeek === "number" && Number.isFinite(parsed.dayOfWeek));
+        if (!dowOk) {
+          setImportParseError("Each row needs Day of week (e.g. Monday or 0).");
+          return;
+        }
+        if (!parsed.startTime || !parsed.endTime) {
+          setImportParseError("Each row needs Start Time and End Time (HH:MM).");
+          return;
+        }
+        rows.push(parsed);
+      }
+      if (rows.length === 0) {
+        setImportParseError("No data rows found.");
+        return;
+      }
+      setImportRows(rows);
+    } catch {
+      setImportParseError("Could not read the Excel file.");
+    }
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setImportSubmitError("");
+    if (importRows.length === 0) {
+      setImportSubmitError("Parse an Excel file first.");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const res = await authFetch("/api/timetable/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          rows: importRows.map((r) => ({
+            batchCourseId: r.batchCourseId || null,
+            batchName: r.batchName || null,
+            sectionName: r.sectionName || null,
+            courseCode: r.courseCode || null,
+            courseId: r.courseId || null,
+            semester: r.semester ?? null,
+            dayOfWeek: r.dayOfWeek,
+            startTime: r.startTime,
+            endTime: r.endTime,
+            room: r.room || null,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportSubmitError(formatApiError(data));
+        return;
+      }
+      setShowImport(false);
+      void fetchSlots();
+      alertBulkImportSummary(data.created ?? 0, data.failed ?? []);
+    } catch {
+      setImportSubmitError("Request failed");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   // Filter slots by selected batch
   const visibleSlots = filterBatchId
-    ? slots.filter(s => {
-        const matchBc = batchCourses.find(bc => bc.id === s.batchCourse?.batch?.name);
-        // We match by batch name since slot doesn't carry batchId directly
-        // Better: filter if batch name matches the selected batch
-        const selectedBatch = batches.find(b => b.id === filterBatchId);
+    ? slots.filter((s) => {
+        const selectedBatch = batches.find((b) => b.id === filterBatchId);
         return selectedBatch ? s.batchCourse.batch.name === selectedBatch.name : true;
       })
     : slots;
@@ -136,11 +305,34 @@ export default function TimetablePage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Timetable</h1>
-        <button type="button" onClick={openForm} className={dash.btnPrimary}>
-          + Add Slot
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              downloadExcelTemplate("timetable-import-template.xlsx", "Timetable", [
+                "Batch Name",
+                "Section Name",
+                "Course Code",
+                "Semester",
+                "Day of week",
+                "Start Time",
+                "End Time",
+                "Room",
+              ])
+            }
+            className={dash.btnSecondary}
+          >
+            Download Excel template
+          </button>
+          <button type="button" onClick={openImport} className={dash.btnSecondary}>
+            Import Excel
+          </button>
+          <button type="button" onClick={openForm} className={dash.btnPrimary}>
+            + Add Slot
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex gap-3">
@@ -275,6 +467,43 @@ export default function TimetablePage() {
                   {formLoading ? "Saving..." : "Add Slot"}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showImport && (
+        <div className={dash.modalOverlay}>
+          <div className={`${dash.modalPanel} ${dash.modalScroll} max-h-[90vh] w-full max-w-lg`}>
+            <h2 className={`${dash.sectionTitle} mb-4`}>Import timetable slots</h2>
+            <BulkImportOrderHint className="mb-3" />
+            <p className={`mb-3 text-xs ${dash.cellMuted}`}>
+              <strong>Day of week</strong>: Monday–Saturday or 0–5 (0 = Monday). Times as HH:MM (24h, e.g. 09:00–10:00). Prospectus{" "}
+              <strong>grid timetables</strong> (day × time slots) are not read automatically — add <strong>one row per slot</strong>{" "}
+              (same paper can repeat for each hour). Use a <strong>Batch Course ID</strong> column when batch/section codes are
+              awkward; otherwise batch name + section + course code + semester must match the app.
+            </p>
+            {importParseError && <div className={dash.errorBanner}>{importParseError}</div>}
+            {importSubmitError && <div className={dash.errorBanner}>{importSubmitError}</div>}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="mb-3 block w-full text-sm"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleExcelFile(f);
+              }}
+            />
+            {importRows.length > 0 && (
+              <p className={`mb-3 text-sm ${dash.cellMuted}`}>{importRows.length} row(s) ready to import.</p>
+            )}
+            <form onSubmit={handleBulkSubmit} className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowImport(false)} className={`flex-1 ${dash.btnSecondary}`}>
+                Cancel
+              </button>
+              <button type="submit" disabled={importLoading || importRows.length === 0} className={`flex-1 ${dash.btnPrimary}`}>
+                {importLoading ? "Importing…" : "Import"}
+              </button>
             </form>
           </div>
         </div>

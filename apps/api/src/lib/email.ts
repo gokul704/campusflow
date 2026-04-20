@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 // Resend free tier: must use onboarding@resend.dev until you verify a domain
-const FROM = process.env.EMAIL_FROM ?? "CampusFlow <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "MAA Education portal <onboarding@resend.dev>";
 
 function getClient(): Resend | null {
   if (!process.env.RESEND_API_KEY) return null;

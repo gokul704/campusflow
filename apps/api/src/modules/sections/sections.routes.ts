@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middleware/authenticate";
+import { OFFICE_ROLES } from "../../middleware/roleGroups";
+import { requireModuleAction } from "../../lib/tenantAccessMatrix";
 import { listSectionsHandler, createSectionHandler, deleteSectionHandler } from "./sections.controller";
 
 const router = Router();
 router.use(authenticate);
-router.get("/", listSectionsHandler);
-router.post("/", authorize("ADMIN"), createSectionHandler);
-router.delete("/:id", authorize("ADMIN"), deleteSectionHandler);
+router.get("/", requireModuleAction("sections", "view"), listSectionsHandler);
+router.post("/", authorize(...OFFICE_ROLES), requireModuleAction("sections", "create"), createSectionHandler);
+router.delete("/:id", authorize(...OFFICE_ROLES), requireModuleAction("sections", "delete"), deleteSectionHandler);
 export default router;

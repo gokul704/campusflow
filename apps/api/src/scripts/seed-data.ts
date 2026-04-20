@@ -3,7 +3,8 @@
  * Seed initial academic data for a tenant.
  *
  * Usage:
- *   npm run seed:data --workspace=@campusflow/api -- --slug=mish
+ *   npm run api:seed:data -- --slug=mish
+ *   npm run api:seed:data   (uses SINGLE_TENANT_SLUG or the only tenant in DB)
  *
  * `npm run seed:data` runs `db:deploy` first so the database matches the Prisma schema
  * (e.g. `users.dateOfBirth`). Use NODE_ENV=production to skip verbose Prisma query logs.
@@ -11,17 +12,39 @@
 
 import { prisma, Role } from "@campusflow/db";
 import bcrypt from "bcryptjs";
+import {
+  printStandaloneSlugHint,
+  printTenantSlugResolutionFailure,
+  resolveTenantSlugForSeed,
+} from "./resolveTenantSlugForSeed";
 
-const slug = process.argv.find(a => a.startsWith("--slug="))?.split("=")[1];
-
-if (!slug) {
-  console.error("Usage: npm run seed:data --workspace=@campusflow/api -- --slug=mish");
-  process.exit(1);
+function slugFromArgv(): string | undefined {
+  return process.argv.find((a) => a.startsWith("--slug="))?.split("=")[1]?.trim();
 }
 
 async function main() {
+  const slug = await resolveTenantSlugForSeed(slugFromArgv());
+  if (!slug) {
+    console.error(`
+Usage (tenant must already exist — run npm run api:seed first):
+
+  From repo root:
+    npm run api:seed:data -- --slug=mish
+    npm run api:seed:data   (with SINGLE_TENANT_SLUG in .env, or exactly one tenant in DB)
+
+  Or from apps/api:
+    npm run seed:data -- --slug=mish
+`);
+    printStandaloneSlugHint();
+    await printTenantSlugResolutionFailure();
+    process.exit(1);
+  }
+
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
-  if (!tenant) { console.error(`Tenant "${slug}" not found.`); process.exit(1); }
+  if (!tenant) {
+    console.error(`Tenant "${slug}" not found.`);
+    process.exit(1);
+  }
 
   console.log(`\n🌱 Seeding data for: ${tenant.name}\n`);
 
@@ -150,7 +173,7 @@ async function main() {
         password: hashed,
         firstName: f.firstName,
         lastName: f.lastName,
-        role: Role.FACULTY,
+        role: Role.OPERATIONS_LECTURER,
         phone: f.phone,
         dateOfBirth: f.dateOfBirth,
       },
@@ -199,7 +222,7 @@ async function main() {
         password: studentHashed,
         firstName: s.firstName,
         lastName: s.lastName,
-        role: Role.STUDENT,
+        role: Role.PRESENT_STUDENT,
         phone: s.phone,
         dateOfBirth: s.dateOfBirth,
       },

@@ -1,20 +1,37 @@
 /**
- * Gets the tenant public key (random UUID) for the current context.
- *
- * In production the subdomain identifies the tenant server-side,
- * so the key is only needed for dev / non-subdomain API calls.
+ * Optional `x-tenant-key` (tenant `publicKey`) when you have multiple institutes
+ * in one database and need to force one from the browser. Standalone setups
+ * use `SINGLE_TENANT_SLUG` on the API instead — no web env required.
  */
 function getTenantKey(): string {
   return process.env.NEXT_PUBLIC_TENANT_KEY ?? "";
 }
 
+function resolveApiUrl(path: string): string {
+  const raw = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
+  if (!raw) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL is not set. In apps/web/.env.local add e.g. NEXT_PUBLIC_API_URL=http://localhost:4000 and restart the dev server."
+    );
+  }
+  if (!/^https?:\/\//i.test(raw)) {
+    throw new Error(
+      `NEXT_PUBLIC_API_URL must start with http:// or https:// (current value is not a full URL).`
+    );
+  }
+  const base = raw.replace(/\/$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${p}`;
+}
+
 /**
- * Fetch wrapper that automatically adds the tenant key header.
+ * Fetch wrapper for the API. Adds optional `x-tenant-key` when set.
  */
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const key = getTenantKey();
+  const url = resolveApiUrl(path);
 
-  return fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
+  return fetch(url, {
     ...options,
     credentials: "include",
     headers: {

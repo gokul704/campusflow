@@ -1,0 +1,149 @@
+#!/usr/bin/env tsx
+/**
+ * Creates one demo user per Role for an existing tenant (for QA / demos).
+ *
+ * Usage:
+ *   npm run api:seed:roles -- --slug=mish
+ *   npm run api:seed:roles   (uses SINGLE_TENANT_SLUG or the only tenant in DB)
+ *
+ * Requires `npm run seed` (or an existing tenant) first.
+ *
+ * Emails (replace {slug} with your tenant slug, e.g. mish):
+ *   {slug}.admin-portal@roles.demo
+ *   {slug}.cmd@roles.demo
+ *   {slug}.principal@roles.demo
+ *   {slug}.staff@roles.demo
+ *   {slug}.lecturer@roles.demo
+ *   {slug}.hr@roles.demo
+ *   {slug}.frontdesk@roles.demo
+ *   {slug}.student@roles.demo
+ *   {slug}.alumni@roles.demo
+ *   {slug}.guest@roles.demo
+ *
+ * `roles.demo` is not a real mailbox — it is only for login in this app.
+ *
+ * Password: one shared password for ALL of these users (default below). Override
+ * with --password=...  Change in production after demos.
+ *
+ * Guest student accounts are seeded like other users; workshop/library limits
+ * are enforced in API routes when you add GUEST_STUDENT checks.
+ */
+
+import { prisma, Role } from "@campusflow/db";
+import bcrypt from "bcryptjs";
+import {
+  printStandaloneSlugHint,
+  printTenantSlugResolutionFailure,
+  resolveTenantSlugForSeed,
+} from "./resolveTenantSlugForSeed";
+
+function parseArgs(): Record<string, string> {
+  const args: Record<string, string> = {};
+  for (const arg of process.argv.slice(2)) {
+    if (!arg.startsWith("--")) continue;
+    const [key, ...rest] = arg.slice(2).split("=");
+    args[key] = rest.join("=");
+  }
+  return args;
+}
+
+type Row = { role: Role; key: string; firstName: string; lastName: string };
+
+/**
+ * One user per Role — realistic names for an institute (demo / QA).
+ * Guest student: role only here; workshop + library access stays a future route guard.
+ */
+const ROLE_ROWS: Row[] = [
+  // Admin
+  { role: Role.ADMIN, key: "admin-portal", firstName: "Lakshmi", lastName: "Venkatesh" },
+  // Leadership
+  { role: Role.CMD, key: "cmd", firstName: "Dr. Suresh", lastName: "Ramachandran" },
+  { role: Role.PRINCIPAL, key: "principal", firstName: "Dr. Deepa", lastName: "Krishnamurthy" },
+  // Staff
+  { role: Role.STAFF, key: "staff", firstName: "Karthik", lastName: "Subramanian" },
+  // Operations
+  { role: Role.OPERATIONS_LECTURER, key: "lecturer", firstName: "Anitha", lastName: "Mohan" },
+  { role: Role.OPERATIONS_HR, key: "hr", firstName: "Meera", lastName: "Krishnan" },
+  { role: Role.OPERATIONS_FRONT_DESK, key: "frontdesk", firstName: "Divya", lastName: "Ramesh" },
+  // Students
+  { role: Role.PRESENT_STUDENT, key: "student", firstName: "Arjun", lastName: "Venkatesh" },
+  { role: Role.ALUMNI, key: "alumni", firstName: "Sanjay", lastName: "Iyer" },
+  { role: Role.GUEST_STUDENT, key: "guest", firstName: "Neha", lastName: "Kapoor" },
+];
+
+async function main() {
+  const args = parseArgs();
+  const slug = await resolveTenantSlugForSeed(args["slug"]);
+  const password = args["password"] ?? "RoleDemo@2026";
+
+  if (!slug) {
+    console.error(`
+Usage:
+  npm run api:seed:roles -- --slug=mish
+  npm run api:seed:roles -- --slug=mish --password=YourDemoPass123
+  npm run api:seed:roles   (with SINGLE_TENANT_SLUG in .env, or exactly one tenant in DB)
+
+  Or: npm run seed:roles --workspace=@campusflow/api -- --slug=mish
+`);
+    printStandaloneSlugHint();
+    await printTenantSlugResolutionFailure();
+    process.exit(1);
+  }
+
+  const tenant = await prisma.tenant.findUnique({ where: { slug } });
+  if (!tenant) {
+    console.error(`❌ Tenant "${slug}" not found. Run npm run api:seed first with the same slug.`);
+    process.exit(1);
+  }
+
+  const hashed = await bcrypt.hash(password, 12);
+  console.log(`\n🌱 Seeding role demo users for: ${tenant.name} (${slug})\n`);
+
+  const seededLines: string[] = [];
+
+  for (const row of ROLE_ROWS) {
+    const email = `${slug}.${row.key}@roles.demo`;
+    await prisma.user.upsert({
+      where: { tenantId_email: { tenantId: tenant.id, email } },
+      create: {
+        tenantId: tenant.id,
+        email,
+        password: hashed,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        role: row.role,
+      },
+      update: {
+        password: hashed,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        role: row.role,
+        isActive: true,
+      },
+    });
+    const display = `${row.firstName} ${row.lastName}`.padEnd(28);
+    console.log(`  ✅ ${row.role.padEnd(24)} ${display} ${email}`);
+    seededLines.push(`${email}  |  ${password}`);
+  }
+
+  console.log(`
+────────────────────────────────────────────────────────────
+Login (same password for every account below)
+Password: ${password}
+
+${seededLines.join("\n")}
+────────────────────────────────────────────────────────────
+Tenant public key: ${tenant.publicKey}  (optional x-tenant-key)
+  SINGLE_TENANT_SLUG=${slug}  in repo-root .env for standalone mode
+
+Demo only — use real emails + unique passwords in production.
+────────────────────────────────────────────────────────────
+`);
+}
+
+main()
+  .catch((e) => {
+    console.error("❌ seed-role-users failed:", e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

@@ -68,3 +68,33 @@ export async function deleteEvent(tenantId: string, id: string) {
   if (!record) throw new Error("Event not found");
   return prisma.event.delete({ where: { id } });
 }
+
+export async function bulkCreateEvents(
+  tenantId: string,
+  rows: Array<{
+    title: string;
+    startDate: string;
+    endDate?: string | null;
+    description?: string | null;
+    eventType?: string | null;
+  }>
+) {
+  const failed: { index: number; error: string }[] = [];
+  let created = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    try {
+      await createEvent(tenantId, {
+        title: row.title.trim(),
+        description: row.description?.trim() || undefined,
+        startDate: row.startDate,
+        endDate: row.endDate?.trim() || undefined,
+        eventType: row.eventType?.trim() || "EVENT",
+      });
+      created++;
+    } catch (e) {
+      failed.push({ index: i, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+  return { created, failed };
+}
