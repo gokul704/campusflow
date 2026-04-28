@@ -12,7 +12,7 @@
  * `roles.demo` is not a real mailbox — demo login only.
  *
  * Password: one shared value for ALL accounts — see `resolveSeedDemoPassword` in `seedDemoPassword.ts`
- *   (default `CampusFlowDemo@2026`, or `SEED_DEMO_PASSWORD` in .env, or `--password=...`).
+ *   (default `Demo@123`, or `SEED_DEMO_PASSWORD` in .env, or `--password=...`).
  *
  * Guest student accounts are seeded like other users; workshop/library limits
  * are enforced in API routes when you add GUEST_STUDENT checks.

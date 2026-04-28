@@ -7,7 +7,7 @@
  *
  * Initial tenant admin from `api:seed` still uses `--email=` / `--password=` you pass there.
  */
-export const DEFAULT_SEED_DEMO_PASSWORD = "CampusFlowDemo@2026";
+export const DEFAULT_SEED_DEMO_PASSWORD = "Demo@123";
 
 export function resolveSeedDemoPassword(cliOverride?: string): string {
   const cli = cliOverride?.trim();

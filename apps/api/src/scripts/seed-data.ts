@@ -7,7 +7,7 @@
  *   npm run api:seed:data -- --slug=mish --password=YourDemoPass123
  *   npm run api:seed:data   (uses SINGLE_TENANT_SLUG or the only tenant in DB)
  *
- * Sample faculty/student passwords: `resolveSeedDemoPassword` (default CampusFlowDemo@2026,
+ * Sample faculty/student passwords: `resolveSeedDemoPassword` (default Demo@123,
  * or SEED_DEMO_PASSWORD in .env, or --password=...).
  *
  * `npm run seed:data` runs `db:deploy` first so the database matches the Prisma schema
