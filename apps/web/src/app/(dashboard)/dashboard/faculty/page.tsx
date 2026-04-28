@@ -185,8 +185,8 @@ export default function FacultyPage() {
     const roles = ["ASSISTANT_PROFESSOR", "PROFESSOR", "CLINICAL_STAFF", "GUEST_PROFESSOR"];
     const responses = await Promise.all(roles.map((r) => authFetch(`/api/users?role=${r}&limit=100`)));
     const payloads = await Promise.all(responses.map((r) => r.json().catch(() => ({ users: [] }))));
-    const merged = payloads.flatMap((d) => (Array.isArray(d) ? d : d.users ?? []));
-    const dedup = Array.from(new Map(merged.map((u: { id: string }) => [u.id, u])).values());
+    const merged = payloads.flatMap((d) => (Array.isArray(d) ? d : d.users ?? [])) as UserOption[];
+    const dedup = Array.from(new Map(merged.map((u) => [u.id, u])).values());
     setUsers(dedup);
     setShowForm(true);
   }
