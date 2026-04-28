@@ -11,6 +11,9 @@ import {
 import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
+
 interface Batch {
   id: string;
   name: string;
@@ -35,6 +38,7 @@ function batchRowFromExcel(r: Record<string, unknown>): BatchImportRow | null {
 }
 
 export default function BatchesPage() {
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -47,6 +51,8 @@ export default function BatchesPage() {
   const [importParseError, setImportParseError] = useState("");
   const [importSubmitError, setImportSubmitError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
+  const canManageBatches = modules?.batches?.create === true;
+  const canDeleteBatches = modules?.batches?.delete === true;
 
   async function fetchBatches() {
     setLoading(true);
@@ -59,7 +65,16 @@ export default function BatchesPage() {
     }
   }
 
-  useEffect(() => { fetchBatches(); }, []);
+  useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.modules && typeof d.modules === "object") setModules(d.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
+    fetchBatches();
+  }, []);
 
   // Auto-fill name when years are entered
   function handleYearChange(field: "startYear" | "endYear", value: string) {
@@ -167,23 +182,25 @@ export default function BatchesPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Batches</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("batches-import-template.xlsx", "Batches", ["Name", "Start Year", "End Year"])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-          <button type="button" onClick={() => setShowForm(true)} className={dash.btnPrimary}>
-            + New Batch
-          </button>
-        </div>
+        {canManageBatches ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadExcelTemplate("batches-import-template.xlsx", "Batches", ["Name", "Start Year", "End Year"])
+              }
+              className={dash.btnSecondary}
+            >
+              Download Excel template
+            </button>
+            <button type="button" onClick={openImport} className={dash.btnSecondary}>
+              Import Excel
+            </button>
+            <button type="button" onClick={() => setShowForm(true)} className={dash.btnPrimary}>
+              + New Batch
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className={dash.tableWrap}>
@@ -194,19 +211,19 @@ export default function BatchesPage() {
               <th className={dash.th}>Years</th>
               <th className={dash.th}>Students</th>
               <th className={dash.th}>Status</th>
-              <th className={dash.th}>Actions</th>
+              {canDeleteBatches ? <th className={dash.th}>Actions</th> : null}
             </tr>
           </thead>
           <tbody className={dash.tbodyDivide}>
             {loading ? (
               <tr>
-                <td colSpan={5} className={dash.emptyCell}>
+                <td colSpan={canDeleteBatches ? 5 : 4} className={dash.emptyCell}>
                   Loading...
                 </td>
               </tr>
             ) : batches.length === 0 ? (
               <tr>
-                <td colSpan={5} className={dash.emptyCell}>
+                <td colSpan={canDeleteBatches ? 5 : 4} className={dash.emptyCell}>
                   No batches yet. Create one to get started.
                 </td>
               </tr>
@@ -232,24 +249,26 @@ export default function BatchesPage() {
                       {b.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => toggleActive(b)}
-                        className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        {b.isActive ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(b)}
-                        className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+                  {canDeleteBatches ? (
+                    <td className="px-4 py-3">
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleActive(b)}
+                          className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          {b.isActive ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(b)}
+                          className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
               ))
             )}
@@ -257,7 +276,7 @@ export default function BatchesPage() {
         </table>
       </div>
 
-      {showForm && (
+      {canManageBatches && showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl dark:border dark:border-gray-800 dark:bg-gray-900">
             <h2 className={`${dash.sectionTitle} mb-4`}>New Batch</h2>
@@ -335,7 +354,7 @@ export default function BatchesPage() {
         </div>
       )}
 
-      {showImport && (
+      {canManageBatches && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import batches</h2>

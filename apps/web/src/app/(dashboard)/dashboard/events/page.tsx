@@ -91,6 +91,7 @@ function formatDateRange(startDate: string, endDate?: string): string {
 }
 
 export default function EventsPage() {
+  const [canManageEvents, setCanManageEvents] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -121,6 +122,18 @@ export default function EventsPage() {
   }
 
   useEffect(() => { fetchEvents(); }, []);
+
+  useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        const create = Boolean(d?.modules?.events?.create);
+        const edit = Boolean(d?.modules?.events?.edit);
+        const del = Boolean(d?.modules?.events?.delete);
+        setCanManageEvents(create || edit || del);
+      })
+      .catch(() => setCanManageEvents(false));
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -232,51 +245,40 @@ export default function EventsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Events & Calendar</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("academic-calendar-import.xlsx", "Calendar", [
-                "Title",
-                "Start date",
-                "End date",
-                "Event type",
-                "Description",
-              ])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setForm({ title: "", description: "", startDate: "", endDate: "", eventType: "EVENT" });
-              setFormError("");
-              setShowForm(true);
-            }}
-            className={dash.btnPrimary}
-          >
-            + Add Event
-          </button>
-        </div>
+        {canManageEvents && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadExcelTemplate("academic-calendar-import.xlsx", "Calendar", [
+                  "Title",
+                  "Start date",
+                  "End date",
+                  "Event type",
+                  "Description",
+                ])
+              }
+              className={dash.btnSecondary}
+            >
+              Download Excel template
+            </button>
+            <button type="button" onClick={openImport} className={dash.btnSecondary}>
+              Import Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setForm({ title: "", description: "", startDate: "", endDate: "", eventType: "EVENT" });
+                setFormError("");
+                setShowForm(true);
+              }}
+              className={dash.btnPrimary}
+            >
+              + Add Event
+            </button>
+          </div>
+        )}
       </div>
-
-      <p className="mb-4 max-w-3xl text-xs text-gray-500 dark:text-gray-400">
-        Paste academic-calendar rows from your prospectus (e.g. M.Sc(Aud)). <strong>Start date</strong> accepts{" "}
-        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">29.10.2025</code>,{" "}
-        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">15.12.25</code>,{" "}
-        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">31.1.26</code>,{" "}
-        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">15th November</code> (year defaults to the current year if
-        omitted), <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">2nd week of February 2026</code>, ISO dates, and Excel
-        date cells. Ranges like <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">11.05.2026 to 14.05.2026</code> use the
-        <strong>first</strong> date in the Start column — put the end date in <strong>End date</strong> when you split into two
-        columns. Vague lines (&quot;1 week vacation&quot;) need a date you type yourself. <strong>Event type</strong> can be set or
-        left blank (inferred from the title; Journal Club → WORKSHOP, reopen → HOLIDAY).
-      </p>
 
       {loading ? (
         <div className={`py-12 text-center ${dash.cellMuted}`}>Loading...</div>
@@ -305,13 +307,15 @@ export default function EventsPage() {
                       )}
                       <p className="text-xs text-gray-400 dark:text-gray-500">{formatDateRange(ev.startDate, ev.endDate)}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(ev)}
-                      className="mt-1 shrink-0 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      Delete
-                    </button>
+                    {canManageEvents && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(ev)}
+                        className="mt-1 shrink-0 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -320,7 +324,7 @@ export default function EventsPage() {
         </div>
       )}
 
-      {showForm && (
+      {canManageEvents && showForm && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} ${dash.modalScroll} max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Add Event</h2>
@@ -400,7 +404,7 @@ export default function EventsPage() {
         </div>
       )}
 
-      {showImport && (
+      {canManageEvents && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} ${dash.modalScroll} max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import calendar events</h2>

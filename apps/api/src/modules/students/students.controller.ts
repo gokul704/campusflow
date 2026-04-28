@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import { Role } from "@campusflow/db";
 import * as svc from "./students.service";
 
 const createStudentUnifiedSchema = z
@@ -7,25 +8,24 @@ const createStudentUnifiedSchema = z
     email: z.string().email(),
     firstName: z.string().min(1),
     lastName: z.string().min(1),
+    role: z.enum([Role.STUDENT, Role.GUEST_STUDENT]).optional(),
     password: z.string().min(8).optional(),
     phone: z.string().optional().nullable(),
     dateOfBirth: z.string().optional().nullable(),
-    batchId: z.string().optional(),
-    sectionId: z.string().optional(),
+    batchId: z.string().optional().nullable(),
     batchName: z.string().optional().nullable(),
-    sectionName: z.string().optional().nullable(),
     rollNumber: z.string().min(1),
     parentName: z.string().optional().nullable(),
     parentPhone: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
   })
   .superRefine((d, ctx) => {
-    const idOk = !!(d.batchId?.trim() && d.sectionId?.trim());
-    const nameOk = !!(d.batchName?.trim() && d.sectionName?.trim());
+    const idOk = !!d.batchId?.trim();
+    const nameOk = !!d.batchName?.trim();
     if (!idOk && !nameOk) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Provide batchName and sectionName, or batchId and sectionId.",
+        message: "Provide batchName or batchId.",
         path: ["batchName"],
       });
     }
@@ -80,16 +80,10 @@ export async function bulkCreateStudentsHandler(req: Request, res: Response): Pr
     res.status(400).json({ error: r.error.flatten() });
     return;
   }
-  try {
-    const out = await svc.bulkCreateStudentsWithUsers(
-      req.tenant.id,
-      r.data.rows,
-      r.data.defaultPassword
-    );
-    res.status(201).json(out);
-  } catch (e: unknown) {
-    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
-  }
+  res.status(400).json({
+    error:
+      "Bulk student import from this endpoint is disabled. Create user accounts in Users first, then complete student profiles individually.",
+  });
 }
 
 export async function updateStudentHandler(req: Request, res: Response): Promise<void> {

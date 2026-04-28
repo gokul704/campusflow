@@ -5,6 +5,9 @@ import { authFetch } from "@/lib/api";
 import { BulkImportSectionsCallout } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
+
 interface Section {
   id: string;
   name: string;
@@ -15,6 +18,7 @@ interface Section {
 interface Batch { id: string; name: string; }
 
 export default function SectionsPage() {
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [filterBatchId, setFilterBatchId] = useState("");
@@ -25,6 +29,8 @@ export default function SectionsPage() {
   const [form, setForm] = useState({ batchId: "", name: "" });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
+  const canManageSections = modules?.batches?.create === true;
+  const canDeleteSections = modules?.batches?.delete === true;
 
   async function fetchSections() {
     setLoading(true);
@@ -37,6 +43,13 @@ export default function SectionsPage() {
   }
 
   useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.modules && typeof d.modules === "object") setModules(d.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
     authFetch("/api/batches").then(r => r.json()).then(d => setBatches(Array.isArray(d) ? d : []));
   }, []);
 
@@ -75,13 +88,15 @@ export default function SectionsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className={dash.pageTitle}>Sections</h1>
-        <button
-          type="button"
-          onClick={() => { setForm({ batchId: "", name: "" }); setFormError(""); setShowForm(true); }}
-          className={dash.btnPrimary}
-        >
-          + Add Section
-        </button>
+        {canManageSections ? (
+          <button
+            type="button"
+            onClick={() => { setForm({ batchId: "", name: "" }); setFormError(""); setShowForm(true); }}
+            className={dash.btnPrimary}
+          >
+            + Add Section
+          </button>
+        ) : null}
       </div>
 
       <BulkImportSectionsCallout />
@@ -104,31 +119,33 @@ export default function SectionsPage() {
               <th className={dash.th}>Section Name</th>
               <th className={dash.th}>Batch</th>
               <th className={dash.th}>Students</th>
-              <th className={dash.th}>Actions</th>
+              {canDeleteSections ? <th className={dash.th}>Actions</th> : null}
             </tr>
           </thead>
           <tbody className={dash.tbodyDivide}>
             {loading ? (
-              <tr><td colSpan={4} className={dash.emptyCell}>Loading...</td></tr>
+              <tr><td colSpan={canDeleteSections ? 4 : 3} className={dash.emptyCell}>Loading...</td></tr>
             ) : sections.length === 0 ? (
-              <tr><td colSpan={4} className={dash.emptyCell}>No sections found. Create one to get started.</td></tr>
+              <tr><td colSpan={canDeleteSections ? 4 : 3} className={dash.emptyCell}>No sections found. Create one to get started.</td></tr>
             ) : sections.map(s => (
               <tr key={s.id} className={dash.rowHover}>
                 <td className={`px-4 py-3 ${dash.cellStrong}`}>{s.name}</td>
                 <td className={`px-4 py-3 ${dash.cellMuted}`}>{s.batch.name}</td>
                 <td className={`px-4 py-3 ${dash.cellMuted}`}>{s._count.students}</td>
-                <td className="px-4 py-3">
-                  <button type="button" onClick={() => handleDelete(s)} className={dash.btnDanger}>
-                    Delete
-                  </button>
-                </td>
+                {canDeleteSections ? (
+                  <td className="px-4 py-3">
+                    <button type="button" onClick={() => handleDelete(s)} className={dash.btnDanger}>
+                      Delete
+                    </button>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {showForm && (
+      {canManageSections && showForm && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-w-sm`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Add Section</h2>

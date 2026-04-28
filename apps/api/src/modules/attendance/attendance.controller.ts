@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import { prisma, Role } from "@campusflow/db";
 import * as svc from "./attendance.service";
 
 const bulkMarkSchema = z.object({
@@ -31,6 +32,17 @@ const bulkImportAttendanceSchema = z.object({
   rows: z.array(bulkImportAttendanceRow).min(1).max(2000),
 });
 
+const TEACHING_FACULTY_ROLES: Role[] = [
+  Role.ASSISTANT_PROFESSOR,
+  Role.PROFESSOR,
+  Role.CLINICAL_STAFF,
+  Role.GUEST_PROFESSOR,
+];
+
+function isTeachingFacultyRole(role: Role | undefined): boolean {
+  return role !== undefined && TEACHING_FACULTY_ROLES.includes(role);
+}
+
 export async function bulkImportAttendanceHandler(req: Request, res: Response): Promise<void> {
   const r = bulkImportAttendanceSchema.safeParse(req.body);
   if (!r.success) {
@@ -46,7 +58,33 @@ export async function bulkImportAttendanceHandler(req: Request, res: Response): 
 
 export async function getAttendanceHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { batchCourseId, studentId, startDate, endDate } = req.query as Record<string, string | undefined>;
+    const role = req.user?.role as Role | undefined;
+    if (isTeachingFacultyRole(role)) {
+      res.status(403).json({ error: "Attendance is not available for faculty accounts" });
+      return;
+    }
+    let { batchCourseId, studentId, startDate, endDate } = req.query as Record<string, string | undefined>;
+    if (req.user?.id && role && (role === Role.STUDENT || role === Role.GUEST_STUDENT)) {
+      const student = await prisma.student.findFirst({
+        where: { userId: req.user.id, tenantId: req.tenant.id },
+        select: { id: true, batchId: true },
+      });
+      if (!student) {
+        res.json([]);
+        return;
+      }
+      studentId = student.id;
+      if (batchCourseId) {
+        const bc = await prisma.batchCourse.findFirst({
+          where: { id: batchCourseId, tenantId: req.tenant.id },
+          select: { batchId: true },
+        });
+        if (!bc || bc.batchId !== student.batchId) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+      }
+    }
     res.json(await svc.getAttendance(req.tenant.id, { batchCourseId, studentId, startDate, endDate }));
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
@@ -71,6 +109,10 @@ export async function bulkMarkAttendanceHandler(req: Request, res: Response): Pr
 
 export async function getAttendanceSummaryHandler(req: Request, res: Response): Promise<void> {
   try {
+    if (isTeachingFacultyRole(req.user?.role as Role | undefined)) {
+      res.status(403).json({ error: "Attendance is not available for faculty accounts" });
+      return;
+    }
     res.json(await svc.getAttendanceSummary(req.tenant.id, String(req.params.batchCourseId)));
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });

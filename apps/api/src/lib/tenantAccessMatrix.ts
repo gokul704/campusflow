@@ -9,7 +9,6 @@ export const MODULE_KEYS = [
   "users",
   "courses",
   "batches",
-  "sections",
   "departments",
   "fees",
   "events",
@@ -19,6 +18,7 @@ export const MODULE_KEYS = [
   "assignments",
   "examGrades",
   "reports",
+  "digitalLibrary",
   "settings",
 ] as const;
 
@@ -28,6 +28,7 @@ export type ModulePerm = { view: boolean; create: boolean; edit: boolean; delete
 const ALL: ModulePerm = { view: true, create: true, edit: true, delete: true };
 const VO: ModulePerm = { view: true, create: false, edit: false, delete: false };
 const VCE: ModulePerm = { view: true, create: true, edit: true, delete: false };
+const NONE: ModulePerm = { view: false, create: false, edit: false, delete: false };
 
 function empty(): Record<ModuleKey, ModulePerm> {
   return Object.fromEntries(MODULE_KEYS.map((k) => [k, { ...VO, view: false }])) as Record<ModuleKey, ModulePerm>;
@@ -49,46 +50,116 @@ function fill(base: Record<ModuleKey, ModulePerm>, patch: Partial<Record<ModuleK
 /** Baseline permissions when `Tenant.accessMatrix` is null. Mirrors current coarse role behaviour. */
 function defaultMatrixForRole(role: Role): Record<ModuleKey, ModulePerm> {
   const m = empty();
-  if (role === Role.ADMIN) {
+  if (role === Role.ADMIN || role === Role.CMD || role === Role.PRINCIPAL) {
     MODULE_KEYS.forEach((k) => {
       m[k] = { ...ALL };
     });
-    return m;
-  }
-  if (role === Role.CMD || role === Role.PRINCIPAL) {
-    MODULE_KEYS.forEach((k) => {
-      m[k] = { ...ALL };
-    });
-    m.onboarding = { view: false, create: false, edit: false, delete: false };
+    // Leadership parity: Admin, Chairman, Principal share identical default access.
     return m;
   }
 
-  if (role === Role.STAFF || role === Role.OPERATIONS_LECTURER) {
+  if (
+    role === Role.ASSISTANT_PROFESSOR ||
+    role === Role.PROFESSOR ||
+    role === Role.CLINICAL_STAFF ||
+    role === Role.GUEST_PROFESSOR
+  ) {
     fill(m, {
-      dashboard: VO,
-      students: VO,
-      faculty: VO,
-      users: VO,
-      courses: VO,
+      dashboard: ALL,
       batchCourses: VO,
       timetable: VO,
-      assignments: VO,
-      examGrades: VO,
+      attendance: { ...NONE },
+      assignments: ALL,
+      examGrades: VCE,
       reports: VO,
-      settings: VO,
+      students: VO,
+      events: ALL,
+      digitalLibrary: VO,
+      // No access by default
+      faculty: { ...NONE },
+      users: { ...NONE },
+      courses: { ...NONE },
+      batches: { ...NONE },
+      departments: { ...NONE },
+      fees: { ...NONE },
+      settings: { ...NONE },
     });
     return m;
   }
 
-  if (role === Role.OPERATIONS_HR || role === Role.OPERATIONS_FRONT_DESK) {
-    MODULE_KEYS.forEach((k) => {
-      m[k] = { ...ALL };
+  if (role === Role.OPERATIONS) {
+    // Operations profile
+    fill(m, {
+      dashboard: ALL,
+      reports: ALL,
+      students: ALL,
+      faculty: ALL,
+      fees: VO, // view + download style access
+      events: ALL,
+      digitalLibrary: VO,
+      settings: { ...NONE },
+      batchCourses: { ...NONE },
+      timetable: { ...NONE },
+      attendance: { ...NONE },
+      assignments: { ...NONE },
+      examGrades: { ...NONE },
+      users: { ...NONE },
+      courses: { ...NONE },
+      batches: { ...NONE },
+      departments: { ...NONE },
     });
-    m.reports = { view: true, create: false, edit: false, delete: false };
     return m;
   }
 
-  if (role === Role.PRESENT_STUDENT) {
+  if (role === Role.ACCOUNTS) {
+    // Accounts profile
+    fill(m, {
+      dashboard: ALL,
+      reports: ALL,
+      students: ALL,
+      faculty: ALL,
+      fees: ALL,
+      events: ALL,
+      digitalLibrary: VO,
+      settings: { ...NONE },
+      batchCourses: { ...NONE },
+      timetable: { ...NONE },
+      attendance: { ...NONE },
+      assignments: { ...NONE },
+      examGrades: { ...NONE },
+      users: { ...NONE },
+      courses: { ...NONE },
+      batches: { ...NONE },
+      departments: { ...NONE },
+    });
+    return m;
+  }
+
+  if (role === Role.IT_STAFF) {
+    // Accounts IT / technical profile
+    fill(m, {
+      dashboard: ALL,
+      batchCourses: VO,
+      timetable: VO,
+      reports: ALL,
+      students: ALL,
+      faculty: ALL,
+      users: ALL,
+      fees: ALL,
+      events: ALL,
+      settings: ALL,
+      digitalLibrary: VO,
+      attendance: { ...NONE },
+      assignments: { ...NONE },
+      examGrades: { ...NONE },
+      courses: { ...NONE },
+      batches: { ...NONE },
+      departments: { ...NONE },
+    });
+    return m;
+  }
+
+  if (role === Role.STUDENT) {
     fill(m, {
       dashboard: VO,
       students: VO,
@@ -96,7 +167,6 @@ function defaultMatrixForRole(role: Role): Record<ModuleKey, ModulePerm> {
       users: VO,
       courses: VO,
       batches: VO,
-      sections: VO,
       departments: VO,
       /** Own fee rows only (API filters by user). */
       fees: VO,
@@ -107,6 +177,7 @@ function defaultMatrixForRole(role: Role): Record<ModuleKey, ModulePerm> {
       assignments: VCE,
       examGrades: VO,
       reports: VO,
+      digitalLibrary: VO,
       settings: VO,
     });
     return m;
@@ -117,6 +188,7 @@ function defaultMatrixForRole(role: Role): Record<ModuleKey, ModulePerm> {
       dashboard: VO,
       examGrades: VO,
       reports: VO,
+      digitalLibrary: VO,
       settings: VO,
     });
     return m;
@@ -145,6 +217,85 @@ function parseStored(raw: unknown): StoredMatrix {
   return raw as StoredMatrix;
 }
 
+function clampByRole(role: Role, perms: Record<ModuleKey, ModulePerm>): Record<ModuleKey, ModulePerm> {
+  const restrictTo = (allowed: ModuleKey[]) => {
+    const allow = new Set<ModuleKey>(allowed);
+    for (const k of MODULE_KEYS) {
+      if (!allow.has(k)) perms[k] = { ...NONE };
+    }
+  };
+
+  const leadershipRoles = new Set<Role>([Role.ADMIN, Role.CMD, Role.PRINCIPAL]);
+
+  if (role === Role.STUDENT) {
+    restrictTo([
+      "dashboard",
+      "fees",
+      "events",
+      "batchCourses",
+      "timetable",
+      "attendance",
+      "assignments",
+      "examGrades",
+      "digitalLibrary",
+      "settings",
+    ]);
+  } else if (role === Role.GUEST_STUDENT) {
+    restrictTo([
+      "dashboard",
+      "assignments",
+      "events",
+      "digitalLibrary",
+      "settings",
+    ]);
+  } else if (
+    role === Role.ASSISTANT_PROFESSOR ||
+    role === Role.PROFESSOR ||
+    role === Role.CLINICAL_STAFF ||
+    role === Role.GUEST_PROFESSOR
+  ) {
+    restrictTo([
+      "dashboard",
+      "batchCourses",
+      "timetable",
+      "assignments",
+      "examGrades",
+      "reports",
+      "students",
+      "events",
+      "digitalLibrary",
+      "settings",
+    ]);
+    // Always read-only: allocations and slots are managed by office / leadership only.
+    perms.batchCourses = {
+      view: perms.batchCourses.view,
+      create: false,
+      edit: false,
+      delete: false,
+    };
+    perms.timetable = {
+      view: perms.timetable.view,
+      create: false,
+      edit: false,
+      delete: false,
+    };
+  }
+
+  // Global policy: create/edit/delete actions are leadership-only.
+  if (!leadershipRoles.has(role)) {
+    for (const k of MODULE_KEYS) {
+      perms[k] = { ...perms[k], create: false, edit: false, delete: false };
+    }
+  }
+
+  // Cashiers record fee payments (not fee structures — those routes still require leadership via `authorize`).
+  if (role === Role.ACCOUNTS) {
+    perms.fees = { view: perms.fees.view, create: true, edit: true, delete: false };
+  }
+
+  return perms;
+}
+
 export function getEffectivePermissions(
   role: Role,
   tenantMatrix: unknown | null | undefined
@@ -153,7 +304,7 @@ export function getEffectivePermissions(
   const stored = parseStored(tenantMatrix);
   const rolePatch = stored[role] ?? stored[String(role)];
   if (rolePatch) fill(base, rolePatch as Partial<Record<ModuleKey, Partial<ModulePerm>>>);
-  return base;
+  return clampByRole(role, base);
 }
 
 export function requireModuleAction(module: ModuleKey, action: keyof ModulePerm) {

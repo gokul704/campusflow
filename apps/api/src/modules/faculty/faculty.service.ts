@@ -51,9 +51,15 @@ export async function getFaculty(tenantId: string, id: string) {
 export async function createFacultyProfile(
   tenantId: string,
   userId: string,
-  data: { departmentId: string; designation: string; qualification?: string }
+  data: { departmentId: string; designation: string; qualification?: string; experience?: string }
 ) {
-  const user = await prisma.user.findFirst({ where: { id: userId, tenantId, role: "OPERATIONS_LECTURER" } });
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      tenantId,
+      role: { in: [Role.ASSISTANT_PROFESSOR, Role.PROFESSOR, Role.CLINICAL_STAFF, Role.GUEST_PROFESSOR] },
+    },
+  });
   if (!user) throw new Error("User not found or not a faculty member");
 
   const existing = await prisma.faculty.findUnique({ where: { userId } });
@@ -71,7 +77,7 @@ export async function createFacultyProfile(
 export async function updateFacultyProfile(
   tenantId: string,
   id: string,
-  data: { departmentId?: string; designation?: string; qualification?: string }
+  data: { departmentId?: string; designation?: string; qualification?: string; experience?: string }
 ) {
   const faculty = await prisma.faculty.findFirst({ where: { id, tenantId } });
   if (!faculty) throw new Error("Faculty not found");
@@ -96,6 +102,7 @@ export type CreateFacultyWithUserInput = {
   phone?: string | null;
   designation: string;
   qualification?: string | null;
+  experience?: string | null;
   departmentId?: string | null;
   departmentCode?: string | null;
   departmentName?: string | null;
@@ -127,7 +134,7 @@ export async function createFacultyWithUser(tenantId: string, input: CreateFacul
         password: hashed,
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
-        role: Role.OPERATIONS_LECTURER,
+        role: Role.ASSISTANT_PROFESSOR,
         phone: input.phone?.trim() || null,
       },
     });
@@ -138,6 +145,7 @@ export async function createFacultyWithUser(tenantId: string, input: CreateFacul
         departmentId: departmentId!,
         designation: input.designation.trim(),
         qualification: input.qualification?.trim() || null,
+        experience: input.experience?.trim() || null,
       },
       include: {
         user: { select: { firstName: true, lastName: true, email: true } },

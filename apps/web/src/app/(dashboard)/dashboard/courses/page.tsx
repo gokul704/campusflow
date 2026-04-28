@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { authFetch, formatApiError } from "@/lib/api";
 import {
@@ -13,6 +12,9 @@ import {
 } from "@/lib/excelImport";
 import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
+
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
 
 interface Course {
   id: string;
@@ -66,6 +68,7 @@ function courseRowFromExcel(r: Record<string, unknown>): CourseImportRow | null 
 }
 
 export default function CoursesPage() {
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [filterDept, setFilterDept] = useState("");
@@ -80,6 +83,8 @@ export default function CoursesPage() {
   const [importParseError, setImportParseError] = useState("");
   const [importSubmitError, setImportSubmitError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
+  const canManageCourses = modules?.courses?.create === true;
+  const canDeleteCourses = modules?.courses?.delete === true;
 
   async function fetchCourses() {
     setLoading(true);
@@ -91,6 +96,13 @@ export default function CoursesPage() {
   }
 
   useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.modules && typeof d.modules === "object") setModules(d.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
     authFetch("/api/departments").then(r => r.json()).then(setDepartments);
   }, []);
 
@@ -207,41 +219,32 @@ export default function CoursesPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Courses</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("courses-import-template.xlsx", "Courses", [
-                "S. code / Paper code",
-                "Subject",
-                "Credits",
-                "Department Code",
-                "Is Common (Y/N)",
-              ])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-          <button type="button" onClick={() => setShowForm(true)} className={dash.btnPrimary}>
-            + Add Course
-          </button>
-        </div>
+        {canManageCourses ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadExcelTemplate("courses-import-template.xlsx", "Courses", [
+                  "S. code / Paper code",
+                  "Subject",
+                  "Credits",
+                  "Department Code",
+                  "Is Common (Y/N)",
+                ])
+              }
+              className={dash.btnSecondary}
+            >
+              Download Excel template
+            </button>
+            <button type="button" onClick={openImport} className={dash.btnSecondary}>
+              Import Excel
+            </button>
+            <button type="button" onClick={() => setShowForm(true)} className={dash.btnPrimary}>
+              + Add Course
+            </button>
+          </div>
+        ) : null}
       </div>
-
-      <p className="mb-3 max-w-3xl text-xs text-gray-500 dark:text-gray-400">
-        Teaching schedules (subject code + title + faculty) are easiest as: import <strong>courses</strong> from this page, then{" "}
-        <strong>faculty</strong> (with emails), then <strong>batch courses</strong> to link each paper to a batch/section/semester. Academic
-        Paper codes like <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">Aud 201M</code> normalize to{" "}
-        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">AUD201M</code> to match the catalogue. Academic milestone dates go under{" "}
-        <Link href="/dashboard/events" className="font-medium text-blue-600 underline hover:text-blue-800 dark:text-blue-400">
-          Events
-        </Link>{" "}
-        (Excel there accepts DD.MM.YYYY).
-      </p>
 
       <div className="mb-4">
         <select
@@ -263,14 +266,14 @@ export default function CoursesPage() {
               <th className={dash.th}>Department</th>
               <th className={dash.th}>Credits</th>
               <th className={dash.th}>Batch links</th>
-              <th className={dash.th}>Actions</th>
+              {canDeleteCourses ? <th className={dash.th}>Actions</th> : null}
             </tr>
           </thead>
           <tbody className={dash.tbodyDivide}>
             {loading ? (
-              <tr><td colSpan={6} className={dash.emptyCell}>Loading...</td></tr>
+              <tr><td colSpan={canDeleteCourses ? 6 : 5} className={dash.emptyCell}>Loading...</td></tr>
             ) : courses.length === 0 ? (
-              <tr><td colSpan={6} className={dash.emptyCell}>No courses yet</td></tr>
+              <tr><td colSpan={canDeleteCourses ? 6 : 5} className={dash.emptyCell}>No courses yet</td></tr>
             ) : courses.map((c) => (
               <tr key={c.id} className={dash.rowHover}>
                 <td className={`px-4 py-3 ${dash.cellMono}`}>{c.code}</td>
@@ -278,16 +281,18 @@ export default function CoursesPage() {
                 <td className={`px-4 py-3 ${dash.cellMuted}`}>{c.department?.name ?? "—"}</td>
                 <td className={`px-4 py-3 ${dash.cellMuted}`}>{c.credits}</td>
                 <td className={`px-4 py-3 ${dash.cellMuted}`}>{c._count?.batchCourses ?? 0}</td>
-                <td className="px-4 py-3">
-                  <button type="button" onClick={() => handleDelete(c.id)} className={dash.btnDanger}>Delete</button>
-                </td>
+                {canDeleteCourses ? (
+                  <td className="px-4 py-3">
+                    <button type="button" onClick={() => handleDelete(c.id)} className={dash.btnDanger}>Delete</button>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {showForm && (
+      {canManageCourses && showForm && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-w-md`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Add Course</h2>
@@ -327,7 +332,7 @@ export default function CoursesPage() {
         </div>
       )}
 
-      {showImport && (
+      {canManageCourses && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import courses</h2>

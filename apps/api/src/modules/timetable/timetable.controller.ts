@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import { Role, prisma } from "@campusflow/db";
 import * as svc from "./timetable.service";
 
 const createSchema = z.object({
@@ -50,9 +51,41 @@ export async function bulkCreateHandler(req: Request, res: Response): Promise<vo
 
 export async function listHandler(req: Request, res: Response): Promise<void> {
   try {
-    const batchId = req.query.batchId as string | undefined;
+    let batchId = req.query.batchId as string | undefined;
     const batchCourseId = req.query.batchCourseId as string | undefined;
-    res.json(await svc.listTimetable(req.tenant.id, { batchId, batchCourseId }));
+    let facultyId: string | undefined;
+
+    if (req.user?.id && (req.user.role === Role.STUDENT || req.user.role === Role.GUEST_STUDENT)) {
+      const student = await prisma.student.findFirst({
+        where: { userId: req.user.id, tenantId: req.tenant.id },
+        select: { batchId: true },
+      });
+      if (!student) {
+        res.json([]);
+        return;
+      }
+      batchId = student.batchId;
+    }
+
+    const teachingFacultyRoles: Role[] = [
+      Role.ASSISTANT_PROFESSOR,
+      Role.PROFESSOR,
+      Role.CLINICAL_STAFF,
+      Role.GUEST_PROFESSOR,
+    ];
+    if (req.user?.id && teachingFacultyRoles.includes(req.user.role as Role)) {
+      const faculty = await prisma.faculty.findFirst({
+        where: { userId: req.user.id, tenantId: req.tenant.id },
+        select: { id: true },
+      });
+      if (!faculty) {
+        res.json([]);
+        return;
+      }
+      facultyId = faculty.id;
+    }
+
+    res.json(await svc.listTimetable(req.tenant.id, { batchId, batchCourseId, facultyId }));
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
   }

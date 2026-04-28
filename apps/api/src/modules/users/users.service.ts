@@ -119,7 +119,43 @@ export async function setUserActive(tenantId: string, userId: string, isActive: 
   });
 }
 
-/** Creates an active user immediately (no invite). Students must use POST /students. */
+export async function setUserRole(tenantId: string, userId: string, newRole: Role) {
+  const user = await prisma.user.findFirst({ where: { id: userId, tenantId } });
+  if (!user) throw new Error("User not found");
+
+  if (user.role === newRole) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, updatedAt: true },
+    });
+  }
+
+  const studentPair =
+    (user.role === Role.STUDENT || user.role === Role.GUEST_STUDENT) &&
+    (newRole === Role.STUDENT || newRole === Role.GUEST_STUDENT);
+  if (!studentPair && (user.role === Role.STUDENT || newRole === Role.STUDENT)) {
+    throw new Error(
+      "Changing role to/from STUDENT is only allowed between STUDENT and GUEST_STUDENT."
+    );
+  }
+
+  if (
+    newRole === Role.ASSISTANT_PROFESSOR ||
+    newRole === Role.PROFESSOR ||
+    newRole === Role.CLINICAL_STAFF ||
+    newRole === Role.GUEST_PROFESSOR
+  ) {
+    throw new Error("Use Create User for faculty roles to set department/designation.");
+  }
+
+  return prisma.user.update({
+    where: { id: userId },
+    data: { role: newRole },
+    select: { id: true, role: true, updatedAt: true },
+  });
+}
+
+/** Creates an active user immediately (no invite). */
 export async function createDirectUser(
   tenantId: string,
   data: {
@@ -132,19 +168,22 @@ export async function createDirectUser(
     departmentId?: string | null;
     designation?: string | null;
     qualification?: string | null;
+    experience?: string | null;
   }
 ) {
-  if (data.role === Role.PRESENT_STUDENT) {
-    throw new Error("Use the Students page to create student accounts (user + profile together).");
-  }
-
   const email = data.email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({ where: { tenantId_email: { tenantId, email } } });
   if (existing) throw new Error("User with this email already exists");
 
   const hashed = await resolveNewUserPasswordForCreate(data.password);
 
-  if (data.role === Role.OPERATIONS_LECTURER) {
+  const isFacultyRole =
+    data.role === Role.ASSISTANT_PROFESSOR ||
+    data.role === Role.PROFESSOR ||
+    data.role === Role.CLINICAL_STAFF ||
+    data.role === Role.GUEST_PROFESSOR;
+
+  if (isFacultyRole) {
     const deptId = data.departmentId?.trim();
     const des = data.designation?.trim();
     if (!deptId) throw new Error("departmentId is required for Operations — Lecturer.");
@@ -172,6 +211,7 @@ export async function createDirectUser(
           departmentId: deptId,
           designation: des,
           qualification: data.qualification?.trim() || null,
+          experience: data.experience?.trim() || null,
         },
       });
       return user;

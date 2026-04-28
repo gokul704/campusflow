@@ -7,7 +7,7 @@ function getTenantKey(): string {
   return process.env.NEXT_PUBLIC_TENANT_KEY ?? "";
 }
 
-function resolveApiUrl(path: string): string {
+export function resolveApiUrl(path: string): string {
   const raw = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
   if (!raw) {
     throw new Error(
@@ -61,6 +61,14 @@ function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
   return match ? match[2] : null;
+}
+
+/** Same-origin `<a href>` / window.open: append JWT because cross-origin requests may not send `cf_token` cookie. */
+export function authenticatedDownloadUrl(apiPath: string): string {
+  const token = getCookie("cf_token");
+  const base = resolveApiUrl(apiPath);
+  const sep = apiPath.includes("?") ? "&" : "?";
+  return token ? `${base}${sep}token=${encodeURIComponent(token)}` : base;
 }
 
 /**

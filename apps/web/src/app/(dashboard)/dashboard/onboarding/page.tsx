@@ -30,7 +30,7 @@ export default function OnboardingPage() {
       <div className={`${dash.card} p-6`}>
         <h1 className={dash.pageTitle}>Onboarding</h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-          Only administrators can access onboarding setup instructions.
+          Only Admin, CMD, and Principal roles can access onboarding setup instructions.
         </p>
         <Link href="/dashboard" className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline">
           Back to dashboard

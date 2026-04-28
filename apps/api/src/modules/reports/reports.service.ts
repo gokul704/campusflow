@@ -3,14 +3,12 @@ import { prisma } from "@campusflow/db";
 export async function attendanceReport(tenantId: string, batchCourseId: string) {
   const batchCourse = await prisma.batchCourse.findFirst({
     where: { id: batchCourseId, tenantId },
-    include: {
-      section: { select: { id: true, name: true } },
-    },
+    select: { id: true, batchId: true },
   });
   if (!batchCourse) throw new Error("BatchCourse not found");
 
   const students = await prisma.student.findMany({
-    where: { tenantId, sectionId: batchCourse.sectionId },
+    where: { tenantId, batchId: batchCourse.batchId },
     include: {
       user: { select: { firstName: true, lastName: true } },
     },
@@ -38,12 +36,305 @@ export async function attendanceReport(tenantId: string, batchCourseId: string) 
   return students.map((student: { id: string; rollNumber: string; user: { firstName: string; lastName: string } }) => {
     const stats = attendanceMap.get(student.id) ?? { present: 0, absent: 0, late: 0, excused: 0, total: 0 };
     return {
+      studentId: student.id,
       rollNumber: student.rollNumber,
-      name: `${student.user.firstName} ${student.user.lastName}`,
+      studentName: `${student.user.firstName} ${student.user.lastName}`,
       ...stats,
       percentage: stats.total > 0 ? Math.round(((stats.present + stats.late) / stats.total) * 100) : 0,
     };
   });
+}
+
+export async function attendanceCourseWiseReport(tenantId: string) {
+  const rows = await prisma.attendance.findMany({
+    where: { tenantId },
+    include: {
+      batchCourse: {
+        select: {
+          id: true,
+          semester: true,
+          batch: { select: { name: true } },
+          course: { select: { name: true, code: true } },
+        },
+      },
+    },
+    orderBy: [{ date: "desc" }],
+  });
+
+  const map = new Map<
+    string,
+    {
+      batchCourseId: string;
+      batchName: string;
+      courseName: string;
+      courseCode: string;
+      semester: number;
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+      total: number;
+      studentIds: Set<string>;
+    }
+  >();
+
+  for (const row of rows) {
+    const key = row.batchCourseId;
+    if (!map.has(key)) {
+      map.set(key, {
+        batchCourseId: row.batchCourseId,
+        batchName: row.batchCourse.batch.name,
+        courseName: row.batchCourse.course.name,
+        courseCode: row.batchCourse.course.code,
+        semester: row.batchCourse.semester,
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        total: 0,
+        studentIds: new Set<string>(),
+      });
+    }
+    const entry = map.get(key)!;
+    entry.total += 1;
+    entry.studentIds.add(row.studentId);
+    if (row.status === "PRESENT") entry.present += 1;
+    else if (row.status === "ABSENT") entry.absent += 1;
+    else if (row.status === "LATE") entry.late += 1;
+    else if (row.status === "EXCUSED") entry.excused += 1;
+  }
+
+  return Array.from(map.values())
+    .map((entry) => ({
+      batchCourseId: entry.batchCourseId,
+      batchName: entry.batchName,
+      courseName: entry.courseName,
+      courseCode: entry.courseCode,
+      semester: entry.semester,
+      present: entry.present,
+      absent: entry.absent,
+      late: entry.late,
+      excused: entry.excused,
+      total: entry.total,
+      studentsMarked: entry.studentIds.size,
+      percentage: entry.total > 0 ? Math.round(((entry.present + entry.late) / entry.total) * 100) : 0,
+    }))
+    .sort((a, b) => {
+      if (a.batchName !== b.batchName) return a.batchName.localeCompare(b.batchName);
+      if (a.semester !== b.semester) return a.semester - b.semester;
+      return a.courseName.localeCompare(b.courseName);
+    });
+}
+
+export async function attendanceStudentWiseReport(tenantId: string, studentId: string) {
+  const student = await prisma.student.findFirst({
+    where: { id: studentId, tenantId },
+    include: {
+      user: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!student) throw new Error("Student not found");
+
+  const rows = await prisma.attendance.findMany({
+    where: { tenantId, studentId },
+    include: {
+      batchCourse: {
+        select: {
+          id: true,
+          semester: true,
+          batch: { select: { name: true } },
+          course: { select: { name: true, code: true } },
+        },
+      },
+    },
+    orderBy: [{ date: "desc" }],
+  });
+
+  const map = new Map<
+    string,
+    {
+      batchCourseId: string;
+      batchName: string;
+      courseName: string;
+      courseCode: string;
+      semester: number;
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+      total: number;
+    }
+  >();
+
+  for (const row of rows) {
+    const key = row.batchCourseId;
+    if (!map.has(key)) {
+      map.set(key, {
+        batchCourseId: row.batchCourseId,
+        batchName: row.batchCourse.batch.name,
+        courseName: row.batchCourse.course.name,
+        courseCode: row.batchCourse.course.code,
+        semester: row.batchCourse.semester,
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        total: 0,
+      });
+    }
+    const entry = map.get(key)!;
+    entry.total += 1;
+    if (row.status === "PRESENT") entry.present += 1;
+    else if (row.status === "ABSENT") entry.absent += 1;
+    else if (row.status === "LATE") entry.late += 1;
+    else if (row.status === "EXCUSED") entry.excused += 1;
+  }
+
+  return {
+    student: {
+      studentId: student.id,
+      studentName: `${student.user.firstName} ${student.user.lastName}`,
+      rollNumber: student.rollNumber,
+    },
+    courses: Array.from(map.values())
+      .map((entry) => ({
+        ...entry,
+        percentage: entry.total > 0 ? Math.round(((entry.present + entry.late) / entry.total) * 100) : 0,
+      }))
+      .sort((a, b) => {
+        if (a.batchName !== b.batchName) return a.batchName.localeCompare(b.batchName);
+        if (a.semester !== b.semester) return a.semester - b.semester;
+        return a.courseName.localeCompare(b.courseName);
+      }),
+  };
+}
+
+export async function attendanceBatchWiseReport(tenantId: string) {
+  const rows = await prisma.attendance.findMany({
+    where: { tenantId },
+    include: {
+      batchCourse: {
+        select: {
+          batchId: true,
+          batch: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: [{ date: "desc" }],
+  });
+
+  const map = new Map<
+    string,
+    {
+      batchId: string;
+      batchName: string;
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+      total: number;
+      studentIds: Set<string>;
+    }
+  >();
+
+  for (const row of rows) {
+    const key = row.batchCourse.batchId;
+    if (!map.has(key)) {
+      map.set(key, {
+        batchId: row.batchCourse.batchId,
+        batchName: row.batchCourse.batch.name,
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        total: 0,
+        studentIds: new Set<string>(),
+      });
+    }
+    const entry = map.get(key)!;
+    entry.total += 1;
+    entry.studentIds.add(row.studentId);
+    if (row.status === "PRESENT") entry.present += 1;
+    else if (row.status === "ABSENT") entry.absent += 1;
+    else if (row.status === "LATE") entry.late += 1;
+    else if (row.status === "EXCUSED") entry.excused += 1;
+  }
+
+  return Array.from(map.values())
+    .map((entry) => ({
+      batchId: entry.batchId,
+      batchName: entry.batchName,
+      present: entry.present,
+      absent: entry.absent,
+      late: entry.late,
+      excused: entry.excused,
+      total: entry.total,
+      studentsMarked: entry.studentIds.size,
+      percentage: entry.total > 0 ? Math.round(((entry.present + entry.late) / entry.total) * 100) : 0,
+    }))
+    .sort((a, b) => a.batchName.localeCompare(b.batchName));
+}
+
+export async function attendanceSemesterWiseReport(tenantId: string) {
+  const rows = await prisma.attendance.findMany({
+    where: { tenantId },
+    include: {
+      batchCourse: {
+        select: {
+          semester: true,
+        },
+      },
+    },
+    orderBy: [{ date: "desc" }],
+  });
+
+  const map = new Map<
+    number,
+    {
+      semester: number;
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+      total: number;
+      studentIds: Set<string>;
+    }
+  >();
+
+  for (const row of rows) {
+    const key = row.batchCourse.semester;
+    if (!map.has(key)) {
+      map.set(key, {
+        semester: key,
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        total: 0,
+        studentIds: new Set<string>(),
+      });
+    }
+    const entry = map.get(key)!;
+    entry.total += 1;
+    entry.studentIds.add(row.studentId);
+    if (row.status === "PRESENT") entry.present += 1;
+    else if (row.status === "ABSENT") entry.absent += 1;
+    else if (row.status === "LATE") entry.late += 1;
+    else if (row.status === "EXCUSED") entry.excused += 1;
+  }
+
+  return Array.from(map.values())
+    .map((entry) => ({
+      semester: entry.semester,
+      present: entry.present,
+      absent: entry.absent,
+      late: entry.late,
+      excused: entry.excused,
+      total: entry.total,
+      studentsMarked: entry.studentIds.size,
+      percentage: entry.total > 0 ? Math.round(((entry.present + entry.late) / entry.total) * 100) : 0,
+    }))
+    .sort((a, b) => a.semester - b.semester);
 }
 
 export async function gradeReport(tenantId: string, batchCourseId: string) {

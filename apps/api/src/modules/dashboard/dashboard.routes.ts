@@ -1,7 +1,8 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { authenticate } from "../../middleware/authenticate";
 import { requireModuleAction } from "../../lib/tenantAccessMatrix";
-import { prisma } from "@campusflow/db";
+import { prisma, Role } from "@campusflow/db";
+import type { Prisma } from "@prisma/client";
 
 const router = Router();
 router.use(authenticate, requireModuleAction("dashboard", "view"));
@@ -20,9 +21,24 @@ router.get(
   "/stats",
   asyncHandler(async (req, res) => {
     const tenantId = req.tenant.id;
+    const userId = req.user!.id;
+    const role = req.user!.role as Role;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    let pendingFeesWhere: Prisma.FeePaymentWhereInput = { tenantId, status: "PENDING" };
+    if (role === Role.GUEST_STUDENT) {
+      pendingFeesWhere = { tenantId, status: "PENDING", applicantUserId: userId };
+    } else if (role === Role.STUDENT) {
+      const st = await prisma.student.findFirst({
+        where: { tenantId, userId },
+        select: { id: true },
+      });
+      pendingFeesWhere = st
+        ? { tenantId, status: "PENDING", OR: [{ studentId: st.id }, { applicantUserId: userId }] }
+        : { tenantId, status: "PENDING", applicantUserId: userId };
+    }
 
     const [
       totalStudents,
@@ -47,9 +63,9 @@ router.get(
         where: { tenantId, status: "PAID", paidAt: { gte: monthStart, lte: monthEnd } },
         _sum: { amount: true },
       }),
-      prisma.feePayment.count({ where: { tenantId, status: "PENDING" } }),
+      prisma.feePayment.count({ where: pendingFeesWhere }),
       prisma.feePayment.aggregate({
-        where: { tenantId, status: "PENDING" },
+        where: pendingFeesWhere,
         _sum: { amount: true },
       }),
       prisma.event.count({ where: { tenantId, startDate: { gte: now } } }),

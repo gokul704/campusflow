@@ -11,6 +11,9 @@ import {
 import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
+
 interface Department {
   id: string;
   name: string;
@@ -27,6 +30,7 @@ function deptRowFromExcel(r: Record<string, unknown>): DeptImportRow | null {
 }
 
 export default function DepartmentsPage() {
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [depts, setDepts] = useState<Department[]>([]);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -38,6 +42,8 @@ export default function DepartmentsPage() {
   const [importParseError, setImportParseError] = useState("");
   const [importSubmitError, setImportSubmitError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
+  const canManageDepartments = modules?.departments?.create === true;
+  const canDeleteDepartments = modules?.departments?.delete === true;
 
   async function fetchDepts() {
     const res = await authFetch("/api/departments");
@@ -45,7 +51,16 @@ export default function DepartmentsPage() {
     setDepts(data);
   }
 
-  useEffect(() => { fetchDepts(); }, []);
+  useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.modules && typeof d.modules === "object") setModules(d.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
+    fetchDepts();
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -158,24 +173,27 @@ export default function DepartmentsPage() {
       )}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Departments</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("departments-import-template.xlsx", "Departments", ["Name", "Code"])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-        </div>
+        {canManageDepartments ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadExcelTemplate("departments-import-template.xlsx", "Departments", ["Name", "Code"])
+              }
+              className={dash.btnSecondary}
+            >
+              Download Excel template
+            </button>
+            <button type="button" onClick={openImport} className={dash.btnSecondary}>
+              Import Excel
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Create form */}
+        {canManageDepartments ? (
         <div className={`${dash.card} p-6`}>
           <h2 className={`${dash.sectionTitle} mb-4 text-base`}>Add Department</h2>
           {error && <div className={dash.errorBanner}>{error}</div>}
@@ -210,35 +228,38 @@ export default function DepartmentsPage() {
             </button>
           </form>
         </div>
+        ) : null}
 
         {/* List */}
-        <div className={`${dash.tableWrap} lg:col-span-2`}>
+        <div className={`${dash.tableWrap} ${canManageDepartments ? "lg:col-span-2" : "lg:col-span-3"}`}>
           <table className="w-full text-sm">
             <thead className={dash.thead}>
               <tr>
                 <th className={dash.th}>Name</th>
                 <th className={dash.th}>Code</th>
-                <th className={dash.th}>Actions</th>
+                {canDeleteDepartments ? <th className={dash.th}>Actions</th> : null}
               </tr>
             </thead>
             <tbody className={dash.tbodyDivide}>
               {depts.length === 0 ? (
-                <tr><td colSpan={3} className={dash.emptyCell}>No departments yet</td></tr>
+                <tr><td colSpan={canDeleteDepartments ? 3 : 2} className={dash.emptyCell}>No departments yet</td></tr>
               ) : depts.map((dept) => (
                 <tr key={dept.id} className={dash.rowHover}>
                   <td className={`px-4 py-3 ${dash.cellStrong}`}>{dept.name}</td>
                   <td className="px-4 py-3">
                     <span className={`${dash.badge} font-mono`}>{dept.code}</span>
                   </td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(dept.id)}
-                      className={dash.btnDanger}
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  {canDeleteDepartments ? (
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(dept.id)}
+                        className={dash.btnDanger}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -246,7 +267,7 @@ export default function DepartmentsPage() {
         </div>
       </div>
 
-      {showImport && (
+      {canManageDepartments && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import departments</h2>

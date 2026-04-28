@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MISH — MAA Institute of Speech and Hearing</title>
+<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<!-- PLACEMENT POPUP ANNOUNCEMENT -->
+<div id="placementPopup" class="popup-overlay">
+  <div class="popup-box">
+    <button class="popup-close" onclick="closePopup()"><i class="fas fa-times"></i></button>
+    <div class="popup-header">
+      <div class="popup-badge">🎉 <span data-en="MISH UPDATES" data-hi="प्लेसमेंट समाचार 2024–25">MISH UPDATES</span></div>
+      <h2 data-en="Admissions open 2025-26" data-hi="रिकॉर्ड-तोड़ प्लेसमेंट!">Admissions open 2025-26</h2>
+      <p data-en="Your journey to becoming a skilled hearing &amp; speech professional starts now. Accredited courses, expert faculty, and hands-on training for your future." data-hi="एक कुशल श्रवण एवं वाणी पेशेवर बनने की आपकी यात्रा यहीं से शुरू होती है। मान्यता प्राप्त पाठ्यक्रम, अनुभवी संकाय और भविष्य के लिए व्यावहारिक प्रशिक्षण।">Your journey to becoming a skilled hearing & speech professional starts now. Accredited courses, expert faculty, and hands-on training for your future.</p>
+    </div>
+    <div class="popup-stats">
+      <div class="stat-item">
+        <span class="stat-num">2019</span>
+        <span class="stat-label" data-en="Established" data-hi="स्थापित">Established</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">13+</span>
+        <span class="stat-label" data-en="Core Faculty" data-hi="मुख्य संकाय">Core Faculty</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">3</span>
+        <span class="stat-label" data-en="Accredited Programs" data-hi="मान्यता प्राप्त कार्यक्रम">Accredited Programs</span>
+      </div>
+    </div>
+    <div class="popup-companies">
+      <span>MAA Hospitals</span><span>Sweekaar Academy</span><span>AYJNISHD</span><span>Hearing Aid Centres</span><span>Speech Clinics</span><span>Community Outreach</span><span>Rehabilitation Units</span><span>Inclusive Schools</span>
+    </div>
+    <a href="#academics" class="popup-btn" onclick="closePopup()" data-en="Explore Programs →" data-hi="कार्यक्रम देखें →">Explore Programs →</a>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="#"><i class="fas fa-phone"></i> +91 9100-072-758</a>
+    <a href="#"><i class="fas fa-envelope"></i> admin@mish.com</a>
+  </div>
+  <div class="topbar-right">
+    <a href="/login"><i class="fas fa-user-graduate"></i> <span data-en="Student Portal" data-hi="छात्र पोर्टल">Student Portal</span></a>
+    <a href="/login"><i class="fas fa-user-tie"></i> <span data-en="Staff Login" data-hi="स्टाफ लॉगिन">Staff Login</span></a>
+    <a href="/login"><i class="fas fa-users"></i> <span data-en="Alumni" data-hi="पूर्व छात्र">Alumni</span></a>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="main-header" id="mainHeader">
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-emblem">
+        <img class="logo-image" src="https://mish.co.in/images/logo/mish-logo.png" alt="MISH logo">
+      </div>
+      <div class="logo-text">
+        <h1 data-en="MAA Institute of Speech and Hearing" data-hi="माँ इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग">MAA Institute of Speech and Hearing</h1>
+        <p data-en="Affiliated to Osmania University | RCI Approved | Est. 2019" data-hi="उस्मानिया विश्वविद्यालय से संबद्ध | RCI अनुमोदित | स्थापित 2019">Affiliated to Osmania University | RCI Approved | Est. 2019</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="zoom-controls">
+        <button onclick="zoomOut()" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+        <button onclick="resetZoom()" title="Reset"><i class="fas fa-undo"></i></button>
+        <button onclick="zoomIn()" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+      </div>
+      <div class="lang-picker-wrap">
+        <label for="langSelect" class="visually-hidden" data-en="Choose language" data-hi="भाषा चुनें">Choose language</label>
+        <select id="langSelect" class="lang-select" aria-label="Choose language">
+          <option value="en" selected>English</option>
+          <option value="hi">हिंदी (Hindi)</option>
+          <option value="local" id="langSelectLocalOpt">Regional…</option>
+        </select>
+      </div>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <nav class="main-nav" id="mainNav">
+    <ul>
+      <li><a href="#home" data-en="Home" data-hi="होम">Home</a></li>
+      <li class="has-dropdown">
+        <a href="#about" data-en="About" data-hi="हमारे बारे में">About <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown">
+          <a href="#vision-mission" data-en="Vision & Mission" data-hi="दृष्टि और मिशन">Vision &amp; Mission</a>
+          <a href="#principal" data-en="Principal's Message" data-hi="प्राचार्य का संदेश">Principal's Message</a>
+          <a href="#principal" data-en="Leadership" data-hi="नेतृत्व">Leadership</a>
+          <a href="#gallery" data-en="Infrastructure" data-hi="बुनियादी ढांचा">Infrastructure</a>
+          <a href="#about" data-en="Accreditations" data-hi="मान्यताएं">Accreditations</a>
+        </div>
+      </li>
+      <li class="has-dropdown">
+        <a href="#academics" data-en="Academics" data-hi="शिक्षा">Academics <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown">
+          <a href="#course-baslp" data-en="BASLP" data-hi="BASLP">BASLP</a>
+          <a href="#course-pgdei" data-en="PGDEI" data-hi="PGDEI">PGDEI</a>
+          <a href="#course-msc-audiology" data-en="M.Sc Audiology" data-hi="एम.एससी ऑडियोलॉजी">M.Sc Audiology</a>
+          <a href="#academics" data-en="Certificate Programs" data-hi="सर्टिफिकेट कार्यक्रम">Certificate Programs</a>
+          <a href="#academics" data-en="Syllabus" data-hi="पाठ्यक्रम">Syllabus</a>
+        </div>
+      </li>
+      <li class="has-dropdown">
+        <a href="#departments" data-en="Departments" data-hi="विभाग">Departments <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown">
+          <a href="#dept-audiology">Department of Audiology</a>
+          <a href="#dept-cochlear-implant">Department of Cochlear Implant</a>
+          <a href="#dept-early-intervention">Department of Early Intervention</a>
+          <a href="#dept-hearing-science">Department of Hearing &amp; Hearing Science</a>
+        </div>
+      </li>
+      <li><a href="#faculty" data-en="Faculty" data-hi="संकाय">Faculty</a></li>
+      <li><a href="#events" data-en="Events" data-hi="कार्यक्रम">Events</a></li>
+      <li><a href="#gallery" data-en="Gallery" data-hi="गैलरी">Gallery</a></li>
+      <li><a href="#contact" data-en="Contact" data-hi="संपर्क">Contact</a></li>
+      <li><a href="#" data-en="Portal Login" data-hi="पोर्टल लॉगिन">Portal Login</a></li>
+    </ul>
+  </nav>
+</header>
+
+<!-- ANNOUNCEMENT TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-label" data-en="ANNOUNCEMENTS" data-hi="घोषणाएं">ANNOUNCEMENTS</div>
+  <div class="ticker-content">
+    <div class="ticker-track">
+      <span data-en="🎓 Admissions Open 2025-26 — Apply Now for BASLP, PGDEI & M.Sc Audiology programs" data-hi="🎓 प्रवेश खुले हैं 2025-26 — BASLP, PGDEI और M.Sc Audiology के लिए अभी आवेदन करें">🎓 Admissions Open 2025-26 — Apply Now for BASLP, PGDEI &amp; M.Sc Audiology programs</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="🏥 World Audiologist Day Celebrations at MAA Hospitals" data-hi="🏥 विश्व ऑडियोलॉजिस्ट दिवस समारोह, एमएए अस्पतालों में">🏥 World Audiologist Day Celebrations at MAA Hospitals</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="💼 MANOGNA - Suicide Prevention Awareness Program this month" data-hi="💼 नैदानिक भर्ती ड्राइव: अस्पताल और पुनर्वास भागीदार 5-7 मई को आएंगे">💼 MANOGNA - Suicide Prevention Awareness Program this month</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="🧠 MANOGNA - Suicide Prevention Awareness Program" data-hi="🧠 मनोग्ना — आत्महत्या रोकथाम जागरूकता कार्यक्रम">🧠 MANOGNA - Suicide Prevention Awareness Program</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="🔬 COSMI Workshop 2025 — Comprehensive Sensory Motor Intervention" data-hi="🔬 COSMI कार्यशाला 2025 — व्यापक संवेदी-मोटर हस्तक्षेप">🔬 COSMI Workshop 2025 — Comprehensive Sensory Motor Intervention</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+    </div>
+  </div>
+</div>
+
+<!-- HERO SECTION -->
+<section class="hero" id="home">
+  <div class="hero-slides">
+    <div class="hero-slide active" style="background-image: url('/mish/mish-21.png')">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge" data-en="Affiliated to Osmania University" data-hi="उस्मानिया विश्वविद्यालय से संबद्ध">Affiliated to Osmania University</div>
+        <h2 data-en="MAA Institute of Speech and Hearing (MISH)" data-hi="एमएए इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग (एमआईएसएच)">MAA Institute of Speech and Hearing (MISH)</h2>
+        <p data-en="Your journey to becoming a skilled hearing & speech professional starts now. Accredited courses, expert faculty, and hands-on training for your future." data-hi="एक कुशल श्रवण एवं वाणी पेशेवर बनने की आपकी यात्रा यहीं से शुरू होती है। मान्यता प्राप्त पाठ्यक्रम, अनुभवी संकाय और भविष्य के लिए व्यावहारिक प्रशिक्षण।">Your journey to becoming a skilled hearing & speech professional starts now. Accredited courses, expert faculty, and hands-on training for your future.</p>
+        <div class="hero-btns">
+          <a href="#academics" class="btn-primary" data-en="Explore Programs" data-hi="पाठ्यक्रम देखें">Explore Programs</a>
+          <a href="#contact" class="btn-outline" data-en="Contact Us" data-hi="संपर्क करें">Contact Us</a>
+        </div>
+      </div>
+    </div>
+    <div class="hero-slide" style="background-image: url('/mish/mish-14.png')">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge" data-en="Learn. Heal. Inspire." data-hi="सीखें। उपचार करें। प्रेरित करें।">Learn. Heal. Inspire.</div>
+        <h2 data-en="WHERE HEARING MEETS HOPE" data-hi="जहाँ श्रवण आशा से मिलता है">WHERE HEARING MEETS HOPE</h2>
+        <p data-en="Established in 2019, MISH offers accredited programs with expert faculty and a hospital-campus learning environment for real-world clinical exposure." data-hi="2019 में स्थापित, एमआईएसएच मान्यता प्राप्त कार्यक्रम, विशेषज्ञ संकाय और वास्तविक नैदानिक अनुभव के लिए अस्पताल-कैंपस शिक्षण वातावरण प्रदान करता है।">Established in 2019, MISH offers accredited programs with expert faculty and a hospital-campus learning environment for real-world clinical exposure.</p>
+        <div class="hero-btns">
+          <a href="#about" class="btn-primary" data-en="About MISH" data-hi="एमआईएसएच के बारे में">About MISH</a>
+          <a href="#academics" class="btn-outline" data-en="Courses Offered" data-hi="प्रस्तावित पाठ्यक्रम">Courses Offered</a>
+        </div>
+      </div>
+    </div>
+    <div class="hero-slide" style="background-image: url('/mish/mish-20.png')">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge" data-en="Empowering Communication" data-hi="संचार को सशक्त बनाना">Empowering Communication</div>
+        <h2 data-en="Expert Faculty & Clinical Training" data-hi="विशेषज्ञ संकाय एवं नैदानिक प्रशिक्षण">Expert Faculty & Clinical Training</h2>
+        <p data-en="Meet the experienced educators and clinicians guiding students at MISH." data-hi="एमआईएसएच में छात्रों का मार्गदर्शन करने वाले अनुभवी शिक्षक व क्लिनिशियन।">Meet the experienced educators and clinicians guiding students at MISH.</p>
+        <div class="hero-btns">
+          <a href="#faculty" class="btn-primary" data-en="Core Faculty" data-hi="मुख्य संकाय">Core Faculty</a>
+          <a href="#contact" class="btn-outline" data-en="Contact Us" data-hi="संपर्क करें">Contact Us</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button class="slide-prev" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
+  <button class="slide-next" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
+  <div class="slide-dots">
+    <span class="dot active" onclick="goToSlide(0)"></span>
+    <span class="dot" onclick="goToSlide(1)"></span>
+    <span class="dot" onclick="goToSlide(2)"></span>
+  </div>
+</section>
+
+<!-- QUICK STATS -->
+<section class="quick-stats">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <i class="fas fa-user-graduate"></i>
+      <div class="count" data-target="2019">0</div>
+      <p data-en="Established" data-hi="स्थापित">Established</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-chalkboard-teacher"></i>
+      <div class="count" data-target="13">0</div>
+      <p data-en="Core Faculty" data-hi="मुख्य संकाय">Core Faculty</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-building"></i>
+      <div class="count" data-target="3">0</div>
+      <p data-en="Accredited Programs" data-hi="मान्यता प्राप्त कार्यक्रम">Accredited Programs</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-flask"></i>
+      <div class="count" data-target="4">0</div>
+      <p data-en="Core Departments" data-hi="मुख्य विभाग">Core Departments</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-award"></i>
+      <div class="count" data-target="26">0</div>
+      <p data-en="Leadership Experience" data-hi="नेतृत्व अनुभव">Leadership Experience</p>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT + ANNOUNCEMENTS -->
+<section class="about-news" id="about">
+  <div class="container">
+    <div class="about-news-grid">
+      <div class="about-panel">
+        <div class="section-tag" data-en="About MISH" data-hi="एमआईएसएच के बारे में">About MISH</div>
+        <h2 data-en="A comprehensive multi-purpose institute" data-hi="एक व्यापक बहुउद्देशीय संस्थान">A comprehensive multi-purpose institute</h2>
+        <p data-en="MAA Institute of Speech and Hearing (MISH) is a comprehensive multi-purpose institute focusing on the identification, intervention, rehabilitation and education of individuals with speech and hearing disorders." data-hi="एमएए इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग (एमआईएसएच) एक व्यापक बहुउद्देशीय संस्थान है, जो वाणी और श्रवण विकारों वाले व्यक्तियों की पहचान, हस्तक्षेप, पुनर्वास और शिक्षा पर केंद्रित है।">MAA Institute of Speech and Hearing (MISH) is a comprehensive multi-purpose institute focusing on the identification, intervention, rehabilitation and education of individuals with speech and hearing disorders.</p>
+        <div class="about-features">
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="Affiliated to Osmania University" data-hi="उस्मानिया विश्वविद्यालय से संबद्ध">Affiliated to Osmania University</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="RCI Approved Programs" data-hi="आरसीआई अनुमोदित कार्यक्रम">RCI Approved Programs</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="Established in 2019" data-hi="2019 में स्थापित">Established in 2019</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="Hospital-campus clinical exposure" data-hi="अस्पताल-कैंपस नैदानिक अनुभव">Hospital-campus clinical exposure</span></div>
+        </div>
+        <a href="#vision-mission" class="btn-primary" data-en="Read More About MISH" data-hi="एमआईएसएच के बारे में और पढ़ें">Read More About MISH</a>
+      </div>
+
+      <div class="news-panel">
+        <div class="news-tabs">
+          <button class="tab-btn active" onclick="switchTab('news', this)" data-en="News & Events" data-hi="समाचार और कार्यक्रम">News &amp; Events</button>
+          <button class="tab-btn" onclick="switchTab('notice', this)" data-en="Notices" data-hi="सूचनाएं">Notices</button>
+          <button class="tab-btn" onclick="switchTab('tender', this)" data-en="Tenders" data-hi="निविदाएं">Tenders</button>
+        </div>
+        <div class="tab-content active" id="tab-news">
+          <div class="news-item"><span class="news-date">10/10/2025</span><div><a href="#" data-en="World Audiologist Day Celebrations at MAA Hospitals" data-hi="विश्व ऑडियोलॉजिस्ट दिवस समारोह, एमएए अस्पतालों में">World Audiologist Day Celebrations at MAA Hospitals</a><span class="news-tag new">New</span></div></div>
+          <div class="news-item"><span class="news-date">20/09/2025</span><div><a href="#" data-en="MANOGNA - Suicide Prevention Awareness Program" data-hi="मनोग्ना — आत्महत्या रोकथाम जागरूकता कार्यक्रम">MANOGNA - Suicide Prevention Awareness Program</a></div></div>
+          <div class="news-item"><span class="news-date">13/09/2025</span><div><a href="#" data-en="Basic Education & Literacy - Elocution & Essay Competition" data-hi="मूल शिक्षा व साक्षरता — वक्तृत्व व निबंध प्रतियोगिता">Basic Education & Literacy - Elocution & Essay Competition</a></div></div>
+          <div class="news-item"><span class="news-date">26/07/2025</span><div><a href="#" data-en="COSMI Workshop 2025 - Comprehensive Sensory Motor Intervention" data-hi="COSMI कार्यशाला 2025 — व्यापक संवेदी-मोटर हस्तक्षेप">COSMI Workshop 2025 - Comprehensive Sensory Motor Intervention</a><span class="news-tag hot">Hot</span></div></div>
+        </div>
+        <div class="tab-content" id="tab-notice">
+          <div class="news-item"><span class="news-date">Apr 01</span><div><a href="#" data-en="Fee payment last date extended to April 30, 2025" data-hi="शुल्क भुगतान की अंतिम तिथि 30 अप्रैल 2025 तक बढ़ाई गई">Fee payment last date extended to April 30, 2025</a><span class="news-tag new">New</span></div></div>
+          <div class="news-item"><span class="news-date">Mar 25</span><div><a href="#" data-en="PhD Admissions 2025: Apply before April 20" data-hi="पीएचडी प्रवेश 2025: 20 अप्रैल से पहले आवेदन करें">PhD Admissions 2025: Apply before April 20</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 20</span><div><a href="#" data-en="Examination timetable for May 2025 published" data-hi="मई 2025 की परीक्षा समय-सारणी प्रकाशित">Examination timetable for May 2025 published</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 15</span><div><a href="#" data-en="Anti-ragging committee meeting — mandatory attendance" data-hi="रैगिंग विरोधी समिति की बैठक — अनिवार्य उपस्थिति">Anti-ragging committee meeting — mandatory attendance</a></div></div>
+        </div>
+        <div class="tab-content" id="tab-tender">
+          <div class="news-item"><span class="news-date">Apr 01</span><div><a href="#" data-en="Tender for Lab Equipment — Last date April 25" data-hi="लैब उपकरण के लिए निविदा — अंतिम तिथि 25 अप्रैल">Tender for Lab Equipment — Last date April 25</a><span class="news-tag new">New</span></div></div>
+          <div class="news-item"><span class="news-date">Mar 28</span><div><a href="#" data-en="Basic Education & Literacy - Elocution & Essay Competition" data-hi="नए स्पीच थेरेपी लैब उन्नयन हेतु निविदा">Basic Education & Literacy - Elocution & Essay Competition</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 18</span><div><a href="#" data-en="Annual maintenance contract — Network infrastructure" data-hi="वार्षिक रखरखाव अनुबंध — नेटवर्क बुनियादी ढांचा">Annual maintenance contract — Network infrastructure</a></div></div>
+        </div>
+        <a href="#events" class="view-all-link" data-en="View All Announcements →" data-hi="सभी घोषणाएं देखें →">View All Announcements →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRINCIPAL MESSAGE -->
+<section class="principal-section" id="principal">
+  <div class="container">
+    <div class="principal-grid">
+      <div class="principal-photo-wrap">
+        <img
+          class="principal-photo"
+          src="/mish/principal-dr-aparna-ravichandran.png"
+          alt="Portrait of Dr. Aparna Ravichandran, Professor and Principal, MISH"
+          data-en="Portrait of Dr. Aparna Ravichandran, Professor and Principal, MISH"
+          data-hi="डॉ. अपर्णा रविचंद्रन, प्रोफेसर एवं प्राचार्य, MISH का चित्र"
+        >
+      </div>
+      <div class="principal-content">
+        <div class="section-tag" data-en="From the Principal" data-hi="प्राचार्य की ओर से">From the Principal</div>
+        <h2 data-en="Dr. Aparna Ravichandran" data-hi="डॉ. अपर्णा रविचंद्रन">Dr. Aparna Ravichandran</h2>
+        <p class="principal-role" data-en="Professor & Principal, MISH" data-hi="प्रोफेसर एवं प्राचार्य, MISH">Professor & Principal, MISH</p>
+        <p data-en="Dr. Aparna Ravichandran is Professor and Principal at MISH, where she leads both academic and administrative functions. She is deeply committed to teaching and mentoring, with expertise across a wide range of subjects in audiology." data-hi="डॉ. अपर्णा रविचंद्रन MISH में प्रोफेसर और प्राचार्य हैं; वे शैक्षणिक और प्रशासनिक कार्यों का नेतृत्व करती हैं।">Dr. Aparna Ravichandran is Professor and Principal at MISH, where she leads both academic and administrative functions. She is deeply committed to teaching and mentoring, with expertise across a wide range of subjects in audiology.</p>
+        <p data-en="She holds an M.Sc. in ASLP and an interdisciplinary Ph.D., along with an M.Sc. in Psychology, an MBA in HRM, an M.A. in Linguistics, and a PG Diploma in Applied Linguistics." data-hi="उनके पास ASLP में M.Sc., अंतःविषय Ph.D., मनोविज्ञान में M.Sc., HRM में MBA, भाषाविज्ञान में M.A., और अनुप्रयुक्त भाषाविज्ञान में PG डिप्लोमा है।">She holds an M.Sc. in ASLP and an interdisciplinary Ph.D., along with an M.Sc. in Psychology, an MBA in HRM, an M.A. in Linguistics, and a PG Diploma in Applied Linguistics.</p>
+        <p data-en="She has over 25 years of experience teaching undergraduate and postgraduate students. She has served as Lecturer, Reader, Head of Department, and Officer-in-charge Principal at Sweekaar Institute of Speech and Hearing, and as Lecturer at the Ali Yavar Jung National Institute of Speech and Hearing Disabilities (Divyangjan), Secunderabad." data-hi="उन्हें स्नातक और स्नातकोत्तर छात्रों को पढ़ाने का 25 से अधिक वर्षों का अनुभव है।">She has over 25 years of experience teaching undergraduate and postgraduate students. She has served as Lecturer, Reader, Head of Department, and Officer-in-charge Principal at Sweekaar Institute of Speech and Hearing, and as Lecturer at the Ali Yavar Jung National Institute of Speech and Hearing Disabilities (Divyangjan), Secunderabad.</p>
+        <p data-en="She is a member of the Board of Studies (ASLP) at Osmania University and has served on examination boards for ASLP programmes at Bangalore University, Sri Padmavathi Mahila University, Sri Ramachandra University, MUHS, Jaipur University, and others." data-hi="वे उस्मानिया विश्वविद्यालय में ASLP अध्ययन बोर्ड की सदस्य हैं।">She is a member of the Board of Studies (ASLP) at Osmania University and has served on examination boards for ASLP programmes at Bangalore University, Sri Padmavathi Mahila University, Sri Ramachandra University, MUHS, Jaipur University, and others.</p>
+        <p data-en="She has guided more than 60 master's research dissertations and received the Muktesh Award for best paper on hearing aids at ISHACON. She believes in the holistic development of students and serving the community with compassion and excellence." data-hi="उन्होंने 60 से अधिक मास्टर शोध प्रबंधों का मार्गदर्शन किया है।">She has guided more than 60 master's research dissertations and received the Muktesh Award for best paper on hearing aids at ISHACON. She believes in the holistic development of students and serving the community with compassion and excellence.</p>
+        <p class="principal-signoff">
+          <strong data-en="Dr. Aparna Ravichandran" data-hi="डॉ. अपर्णा रविचंद्रन">Dr. Aparna Ravichandran</strong><br>
+          <span data-en="Professor & Principal, MISH" data-hi="प्रोफेसर एवं प्राचार्य, MISH">Professor & Principal, MISH</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="principal-vm-row" id="vision-mission">
+      <div class="principal-vm-col">
+        <div class="principal-vm-col-img">
+          <img src="/mish/mish-14.png" alt="Students in a lecture at MISH" width="640" height="360" loading="lazy" data-en="Students in a lecture at MISH" data-hi="MISH में व्याख्यान में छात्र">
+        </div>
+        <div class="principal-vm-col-body">
+          <h3 data-en="Our Vision" data-hi="हमारी दृष्टि">Our Vision</h3>
+          <p data-en="To be a global centre of excellence in healthcare, research, and education - driving innovation, empowering communities, and transforming lives through compassion and care." data-hi="स्वास्थ्य सेवा, अनुसंधान और शिक्षा में वैश्विक उत्कृष्टता का केंद्र बनना — नवाचार को आगे बढ़ाना, समुदायों को सशक्त बनाना, और करुणा व देखभाल के माध्यम से जीवन को बदलना।">To be a global centre of excellence in healthcare, research, and education - driving innovation, empowering communities, and transforming lives through compassion and care.</p>
+        </div>
+      </div>
+      <div class="principal-vm-col">
+        <div class="principal-vm-col-img">
+          <img src="/mish/mish-20.png" alt="Students attending a seminar at MISH" width="640" height="360" loading="lazy" data-en="Students attending a seminar at MISH" data-hi="MISH में सेमिनार में उपस्थित छात्र">
+        </div>
+        <div class="principal-vm-col-body">
+          <h3 data-en="Our Mission" data-hi="हमारा मिशन">Our Mission</h3>
+          <p data-en="To deliver accessible, high-quality healthcare, advance impactful research, and educate future professionals who create lasting change through innovation, compassion, and care." data-hi="सुलभ, उच्च गुणवत्ता वाली स्वास्थ्य सेवा प्रदान करना, प्रभावशाली अनुसंधान को आगे बढ़ाना, और भविष्य के पेशेवरों को शिक्षित करना जो नवाचार, करुणा और देखभाल के माध्यम से स्थायी परिवर्तन लाएँ।">To deliver accessible, high-quality healthcare, advance impactful research, and educate future professionals who create lasting change through innovation, compassion, and care.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COURSES OFFERED -->
+<section class="departments" id="academics">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Courses Offered" data-hi="प्रस्तावित पाठ्यक्रम">Courses Offered</div>
+      <h2 data-en="Accredited programs with hands-on training for clinical excellence." data-hi="नैदानिक उत्कृष्टता के लिए व्यावहारिक प्रशिक्षण के साथ मान्यता प्राप्त कार्यक्रम।">Accredited programs with hands-on training for clinical excellence.</h2>
+    </div>
+    <div class="dept-grid">
+      <div class="dept-card" id="course-baslp">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)"><i class="fas fa-book-medical"></i></div>
+        <h3 data-en="BASLP" data-hi="BASLP">BASLP</h3>
+        <p data-en="Bachelor in Audiology and Speech Language Pathology" data-hi="ऑडियोलॉजी और स्पीच लैंग्वेज पैथोलॉजी में स्नातक">Bachelor in Audiology and Speech Language Pathology</p>
+        <a href="#contact" data-en="Apply / Enquire" data-hi="आवेदन / पूछताछ">Apply / Enquire</a>
+      </div>
+      <div class="dept-card" id="course-pgdei">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c)"><i class="fas fa-child"></i></div>
+        <h3 data-en="PGDEI" data-hi="PGDEI">PGDEI</h3>
+        <p data-en="Post Graduate Diploma in Early Intervention" data-hi="शीघ्र हस्तक्षेप में स्नातकोत्तर डिप्लोमा">Post Graduate Diploma in Early Intervention</p>
+        <a href="#contact" data-en="Apply / Enquire" data-hi="आवेदन / पूछताछ">Apply / Enquire</a>
+      </div>
+      <div class="dept-card" id="course-msc-audiology">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)"><i class="fas fa-ear-listen"></i></div>
+        <h3 data-en="M.Sc. Audiology" data-hi="एम.एससी ऑडियोलॉजी">M.Sc. Audiology</h3>
+        <p data-en="Master of Science in Audiology" data-hi="ऑडियोलॉजी में विज्ञान स्नातकोत्तर">Master of Science in Audiology</p>
+        <a href="#contact" data-en="Apply / Enquire" data-hi="आवेदन / पूछताछ">Apply / Enquire</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPARTMENTS -->
+<section class="departments" id="departments">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Departments" data-hi="विभाग">Departments</div>
+      <h2 data-en="Our Departments" data-hi="हमारे विभाग">Our Departments</h2>
+      <p data-en="Limitless learning, more possibilities." data-hi="असीम सीख, अधिक संभावनाएँ।">Limitless learning, more possibilities.</p>
+    </div>
+    <div class="dept-grid">
+      <div class="dept-card" id="dept-audiology">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)"><i class="fas fa-ear-listen"></i></div>
+        <h3 data-en="Department of Audiology" data-hi="श्रवण विज्ञान विभाग">Department of Audiology</h3>
+        <p data-en="Clinical hearing assessment, amplification, vestibular workup, and rehabilitation pathways." data-hi="क्लिनिकल श्रवण मूल्यांकन, प्रवर्धन, वेस्टिबुलर वर्कअप और पुनर्वास मार्ग।">Clinical hearing assessment, amplification, vestibular workup, and rehabilitation pathways.</p>
+        <a href="#contact" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card" id="dept-cochlear-implant">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c)"><i class="fas fa-head-side-virus"></i></div>
+        <h3 data-en="Department of Cochlear Implant" data-hi="कॉक्लियर इम्प्लांट विभाग">Department of Cochlear Implant</h3>
+        <p data-en="Implant candidacy, mapping support, and post-implant auditory-verbal rehabilitation." data-hi="इम्प्लांट चयन, मैपिंग समर्थन और पोस्ट-इम्प्लांट ऑडिटरी-वर्बल पुनर्वास।">Implant candidacy, mapping support, and post-implant auditory-verbal rehabilitation.</p>
+        <a href="#contact" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card" id="dept-early-intervention">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)"><i class="fas fa-child-reaching"></i></div>
+        <h3 data-en="Department of Early Intervention" data-hi="शीघ्र हस्तक्षेप विभाग">Department of Early Intervention</h3>
+        <p data-en="Developmental screening, parent coaching, and individualized early support plans." data-hi="विकासात्मक स्क्रीनिंग, अभिभावक मार्गदर्शन और व्यक्तिगत प्रारंभिक सहायता योजनाएँ।">Developmental screening, parent coaching, and individualized early support plans.</p>
+        <a href="#contact" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card" id="dept-hearing-science">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #30cfd0, #667eea)"><i class="fas fa-wave-square"></i></div>
+        <h3 data-en="Department of Hearing & Hearing Science" data-hi="श्रवण एवं श्रवण विज्ञान विभाग">Department of Hearing & Hearing Science</h3>
+        <p data-en="Foundational hearing sciences, diagnostics, and translational clinical learning." data-hi="मूलभूत श्रवण विज्ञान, निदान और अनुप्रयुक्त नैदानिक अध्ययन।">Foundational hearing sciences, diagnostics, and translational clinical learning.</p>
+        <a href="#contact" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOP FACULTY SECTION -->
+<section class="faculty-section" id="faculty">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Core Faculty" data-hi="मुख्य संकाय">Core Faculty</div>
+      <h2 data-en="Meet the experienced educators and clinicians guiding students at MISH." data-hi="MISH में छात्रों का मार्गदर्शन करने वाले अनुभवी शिक्षक और क्लिनिशियन से मिलें।">Meet the experienced educators and clinicians guiding students at MISH.</h2>
+    </div>
+    <div class="faculty-carousel" id="facultyCarousel">
+      <button type="button" class="faculty-carousel-nav faculty-carousel-prev" id="facultyCarouselPrev" aria-label="Previous faculty">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="faculty-carousel-viewport">
+        <div class="faculty-carousel-track" id="facultyCarouselTrack">
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (ASLP), M.Sc (Psy), M.Phil (Psy), MBA (HRM), MA (Ling.), PGD in Ap. Ling., PhD" data-rehab="M.Sc (ASLP), PhD" data-rci="A04594" data-valid="2025" data-joining="01/04/2023">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#667eea,#764ba2)">AR</div>
+        <div class="faculty-info"><h4 data-en="Dr. Aparna Ravichandran" data-hi="डॉ. अपर्णा रविचंद्रन">Dr. Aparna Ravichandran</h4><span class="faculty-title" data-en="Principal & Professor (AUD)" data-hi="प्राचार्य एवं प्रोफेसर (AUD)">Principal & Professor (AUD)</span><span class="faculty-exp" data-en="26 Years" data-hi="26 वर्ष">26 Years</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="Academic Leadership" data-hi="शैक्षणिक नेतृत्व">Academic Leadership</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A04594" data-hi="आरसीआई: A04594">RCI: A04594</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="A-53857" data-valid="2028" data-joining="22/05/2019">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#667eea,#764ba2)">GC</div>
+        <div class="faculty-info"><h4 data-en="Mr. Gish Chacko" data-hi="श्री गिश चाको">Mr. Gish Chacko</h4><span class="faculty-title" data-en="Associate Professor (AUD) & Head, Dept. of Audiology" data-hi="सहायक प्रोफेसर (AUD) एवं प्रमुख, ऑडियोलॉजी विभाग">Associate Professor (AUD) & Head, Dept. of Audiology</span><span class="faculty-exp" data-en="12 Years" data-hi="12 वर्ष">12 Years</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="Clinical Teaching" data-hi="नैदानिक शिक्षण">Clinical Teaching</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A-53857" data-hi="आरसीआई: A-53857">RCI: A-53857</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="A-56065" data-valid="2028" data-joining="05/04/2021">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#667eea,#764ba2)">SS</div>
+        <div class="faculty-info"><h4 data-en="Mrs. Sandhra Sakariyas" data-hi="श्रीमती संध्रा सकारियास">Mrs. Sandhra Sakariyas</h4><span class="faculty-title" data-en="Associate Professor (AUD)" data-hi="सहायक प्रोफेसर (AUD)">Associate Professor (AUD)</span><span class="faculty-exp" data-en="11 Years" data-hi="11 वर्ष">11 Years</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="Clinical Practice" data-hi="नैदानिक अभ्यास">Clinical Practice</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A-56065" data-hi="आरसीआई: A-56065">RCI: A-56065</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (Aud), D.AUD" data-rehab="M.Sc (Aud)" data-rci="—" data-valid="—" data-joining="08/04/2025">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#f093fb,#f5576c)">ST</div>
+        <div class="faculty-info"><h4 data-en="Dr. Sailaja Timmaraju" data-hi="डॉ. सैलाजा तिम्मराजु">Dr. Sailaja Timmaraju</h4><span class="faculty-title" data-en="Associate Professor (AUD)" data-hi="सहायक प्रोफेसर (AUD)">Associate Professor (AUD)</span><span class="faculty-exp" data-en="15 Years" data-hi="15 वर्ष">15 Years</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="Auditory Training" data-hi="श्रवण प्रशिक्षण">Auditory Training</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: —" data-hi="आरसीआई: —">RCI: —</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="SLP" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="A-03520" data-valid="2028" data-joining="04/01/2022">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#43e97b,#38f9d7); color:#1a4a1a">AS</div>
+        <div class="faculty-info"><h4 data-en="Mrs. Archana Sasthikar" data-hi="श्रीमती अर्चना सस्थिकर">Mrs. Archana Sasthikar</h4><span class="faculty-title" data-en="Associate Professor (SLP) & Head, Dept. of Speech Pathology" data-hi="सहायक प्रोफेसर (SLP) एवं प्रमुख, वाणी पैथोलॉजी विभाग">Associate Professor (SLP) & Head, Dept. of Speech Pathology</span><span class="faculty-exp" data-en="16 Years" data-hi="16 वर्ष">16 Years</span><div class="faculty-tags"><span data-en="SLP" data-hi="SLP">SLP</span><span data-en="Speech Pathology" data-hi="वाणी पैथोलॉजी">Speech Pathology</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A-03520" data-hi="आरसीआई: A-03520">RCI: A-03520</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="A-56099" data-valid="2025" data-joining="09/07/2018">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#43e97b,#38f9d7); color:#1a4a1a">HF</div>
+        <div class="faculty-info"><h4 data-en="Mr. Hussam Farooq Akber" data-hi="श्री हुसाम फारूक अकबर">Mr. Hussam Farooq Akber</h4><span class="faculty-title" data-en="Assistant Professor (AUD)" data-hi="सहायक प्रोफेसर (AUD)">Assistant Professor (AUD)</span><span class="faculty-exp" data-en="5 Years" data-hi="5 वर्ष">5 Years</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="Academic Mentoring" data-hi="शैक्षणिक मार्गदर्शन">Academic Mentoring</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A-56099" data-hi="आरसीआई: A-56099">RCI: A-56099</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="SLP" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="—" data-valid="—" data-joining="—">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#fa709a,#fee140); color:#3a1a00">AB</div>
+        <div class="faculty-info"><h4 data-en="Mrs. Ambika Bose" data-hi="श्रीमती अंबिका बोस">Mrs. Ambika Bose</h4><span class="faculty-title" data-en="Assistant Professor (SLP)" data-hi="सहायक प्रोफेसर (SLP)">Assistant Professor (SLP)</span><span class="faculty-exp" data-en="3 Years" data-hi="3 वर्ष">3 Years</span><div class="faculty-tags"><span data-en="SLP" data-hi="SLP">SLP</span><span data-en="Language Therapy" data-hi="भाषा चिकित्सा">Language Therapy</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: —" data-hi="आरसीआई: —">RCI: —</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="SLP / AVT" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="A-63308" data-valid="2026" data-joining="19/07/2017">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#fa709a,#fee140); color:#3a1a00">VN</div>
+        <div class="faculty-info"><h4 data-en="Mr. Vikas N." data-hi="श्री विकास N.">Mr. Vikas N.</h4><span class="faculty-title" data-en="Assistant Professor (SLP)" data-hi="सहायक प्रोफेसर (SLP)">Assistant Professor (SLP)</span><span class="faculty-exp" data-en="7 Years" data-hi="7 वर्ष">7 Years</span><div class="faculty-tags"><span data-en="SLP" data-hi="SLP">SLP</span><span data-en="AVT" data-hi="AVT">AVT</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A-63308" data-hi="आरसीआई: A-63308">RCI: A-63308</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="SLP" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="—" data-valid="—" data-joining="—">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#4facfe,#00f2fe); color:#003a50">HS</div>
+        <div class="faculty-info"><h4 data-en="Mrs. Haritha Singaraju" data-hi="श्रीमती हरिता सिंगराजु">Mrs. Haritha Singaraju</h4><span class="faculty-title" data-en="Assistant Professor (SLP)" data-hi="सहायक प्रोफेसर (SLP)">Assistant Professor (SLP)</span><span class="faculty-exp" data-en="—" data-hi="—">—</span><div class="faculty-tags"><span data-en="SLP" data-hi="SLP">SLP</span><span data-en="Student Support" data-hi="छात्र सहायता">Student Support</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: —" data-hi="आरसीआई: —">RCI: —</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="A-68035" data-valid="—" data-joining="01/11/2019">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#4facfe,#00f2fe); color:#003a50">MM</div>
+        <div class="faculty-info"><h4 data-en="Mr. Mohd Shadab Mohiuddin" data-hi="श्री मोहम्मद शादाब मोहिउद्दीन">Mr. Mohd Shadab Mohiuddin</h4><span class="faculty-title" data-en="ASLP Grade I" data-hi="ASLP ग्रेड I">ASLP Grade I</span><span class="faculty-exp" data-en="3 Years" data-hi="3 वर्ष">3 Years</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="ASLP" data-hi="ASLP">ASLP</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A-68035" data-hi="आरसीआई: A-68035">RCI: A-68035</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (ASLP)" data-rehab="M.Sc (ASLP)" data-rci="—" data-valid="—" data-joining="—">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#a18cd1,#fbc2eb); color:#3a1a50">SA</div>
+        <div class="faculty-info"><h4 data-en="Mrs. Samata" data-hi="श्रीमती समता">Mrs. Samata</h4><span class="faculty-title" data-en="Assistant Professor (Aud)" data-hi="सहायक प्रोफेसर (ऑड)">Assistant Professor (Aud)</span><span class="faculty-exp" data-en="—" data-hi="—">—</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="Clinical Exposure" data-hi="नैदानिक अनुभव">Clinical Exposure</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: —" data-hi="आरसीआई: —">RCI: —</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="SLP" data-qualification="M.Sc (Audiology)" data-rehab="M.Sc (Audiology)" data-rci="A84864" data-valid="08/11/2027" data-joining="08/12/2023">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#a18cd1,#fbc2eb); color:#3a1a50">SI</div>
+        <div class="faculty-info"><h4 data-en="Ms. Sirisha" data-hi="श्रीमती सिरीशा">Ms. Sirisha</h4><span class="faculty-title" data-en="ASLP Grade I" data-hi="ASLP ग्रेड I">ASLP Grade I</span><span class="faculty-exp" data-en="2 Years" data-hi="2 वर्ष">2 Years</span><div class="faculty-tags"><span data-en="SLP" data-hi="SLP">SLP</span><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A84864" data-hi="आरसीआई: A84864">RCI: A84864</span></div></div>
+      </div>
+      <div class="faculty-card" data-dept="Audiology" data-qualification="M.Sc (Audiology)" data-rehab="M.Sc (Audiology)" data-rci="A85301" data-valid="—" data-joining="05/03/2024">
+        <div class="faculty-avatar" style="background: linear-gradient(135deg,#f77062,#fe5196)">DP</div>
+        <div class="faculty-info"><h4 data-en="Ms. Deepthi" data-hi="श्रीमती दीप्ति">Ms. Deepthi</h4><span class="faculty-title" data-en="ASLP Grade I" data-hi="ASLP ग्रेड I">ASLP Grade I</span><span class="faculty-exp" data-en="2 Years" data-hi="2 वर्ष">2 Years</span><div class="faculty-tags"><span data-en="Audiology" data-hi="ऑडियोलॉजी">Audiology</span><span data-en="ASLP" data-hi="ASLP">ASLP</span></div><div class="faculty-pub"><i class="fas fa-id-badge"></i> <span data-en="RCI: A85301" data-hi="आरसीआई: A85301">RCI: A85301</span></div></div>
+      </div>
+        </div>
+      </div>
+      <button type="button" class="faculty-carousel-nav faculty-carousel-next" id="facultyCarouselNext" aria-label="Next faculty">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    <div class="faculty-carousel-dots" id="facultyCarouselDots" role="tablist" aria-label="Faculty carousel pages"></div>
+  </div>
+</section>
+
+<!-- PLACEMENTS -->
+<section class="placements" id="placements">
+  <div class="container">
+    <div class="section-header light">
+      <div class="section-tag" data-en="Clinical Outcomes" data-hi="नैदानिक परिणाम">Clinical Outcomes</div>
+      <h2 data-en="Student Success & Professional Pathways" data-hi="छात्र सफलता एवं व्यावसायिक मार्ग">Student Success & Professional Pathways</h2>
+      <p data-en="MISH students progress into hospitals, hearing centers, special schools, and rehabilitation services." data-hi="एमआईएसएच छात्र अस्पतालों, श्रवण केंद्रों, विशेष विद्यालयों और पुनर्वास सेवाओं में आगे बढ़ते हैं।">MISH students progress into hospitals, hearing centers, special schools, and rehabilitation services.</p>
+    </div>
+    <div class="placement-stats-row">
+      <div class="place-stat"><span class="place-num" data-en="26+ Years" data-hi="26+ वर्ष">26+ Years</span><span data-en="Academic Excellence" data-hi="शैक्षणिक उत्कृष्टता">Academic Excellence</span></div>
+      <div class="place-stat"><span class="place-num" data-en="13+ Core Faculty" data-hi="13+ मुख्य संकाय">13+ Core Faculty</span><span data-en="Core Faculty" data-hi="मुख्य संकाय">Core Faculty</span></div>
+      <div class="place-stat"><span class="place-num" data-en="4" data-hi="4">4</span><span data-en="Core Departments" data-hi="मुख्य विभाग">Core Departments</span></div>
+      <div class="place-stat"><span class="place-num" data-en="1000+" data-hi="1000+">1000+</span><span data-en="Clinical Sessions" data-hi="नैदानिक सत्र">Clinical Sessions</span></div>
+      <div class="place-stat"><span class="place-num" data-en="100%" data-hi="100%">100%</span><span data-en="Hands-on Exposure" data-hi="व्यावहारिक अनुभव">Hands-on Exposure</span></div>
+    </div>
+    <div class="company-logos">
+      <div class="logo-track">
+        <div class="company-logo">MAA Hospitals</div><div class="company-logo">Sweekaar Academy</div><div class="company-logo">AYJNISHD</div>
+        <div class="company-logo">Osmania University</div><div class="company-logo">Hearing Aid Centres</div><div class="company-logo">Speech Clinics</div>
+        <div class="company-logo">Community Outreach</div><div class="company-logo">Rehabilitation Units</div><div class="company-logo">Inclusive Schools</div>
+        <div class="company-logo">MAA Hospitals</div><div class="company-logo">Sweekaar Academy</div><div class="company-logo">AYJNISHD</div>
+        <div class="company-logo">Inclusive Schools</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESEARCH -->
+<section class="research-section" id="events">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="News & campus highlights" data-hi="समाचार और कैंपस मुख्य बिंदु">News &amp; campus highlights</div>
+      <h2 data-en="Campus life in the spotlight; latest headlines and highlights" data-hi="स्पॉटलाइट में कैंपस जीवन; ताज़ा शीर्षक और मुख्य बिंदु">Campus life in the spotlight; latest headlines and highlights</h2>
+    </div>
+    <div class="research-grid">
+      <div class="research-card"><div class="research-icon"><i class="fas fa-chalkboard-teacher"></i></div><h3 data-en="Seminars & guest sessions" data-hi="सेमिनार और अतिथि सत्र">Seminars &amp; guest sessions</h3><p data-en="Students and faculty in the institute auditorium. Tap to enlarge." data-hi="संस्थान सभागार में छात्र और संकाय। बड़ा करने के लिए टैप करें।">Students and faculty in the institute auditorium. Tap to enlarge.</p><div class="research-tags"><span data-en="Campus" data-hi="कैंपस">Campus</span><span data-en="Seminars" data-hi="सेमिनार">Seminars</span></div></div>
+      <div class="research-card"><div class="research-icon"><i class="fas fa-stethoscope"></i></div><h3 data-en="Workshops & clinical training" data-hi="कार्यशालाएँ और नैदानिक प्रशिक्षण">Workshops &amp; clinical training</h3><p data-en="Hands-on learning with a strong clinical orientation. Tap to enlarge." data-hi="मजबूत नैदानिक अभिविन्यास के साथ व्यावहारिक सीख। बड़ा करने के लिए टैप करें।">Hands-on learning with a strong clinical orientation. Tap to enlarge.</p><div class="research-tags"><span data-en="Campus" data-hi="कैंपस">Campus</span><span data-en="Clinical Training" data-hi="नैदानिक प्रशिक्षण">Clinical Training</span></div></div>
+      <div class="research-card"><div class="research-icon"><i class="fas fa-people-group"></i></div><h3 data-en="Community & celebrations" data-hi="समुदाय और उत्सव">Community &amp; celebrations</h3><p data-en="Campus events that bring students and mentors together. Tap to enlarge." data-hi="छात्रों और मार्गदर्शकों को एक साथ लाने वाले कैंपस कार्यक्रम। बड़ा करने के लिए टैप करें।">Campus events that bring students and mentors together. Tap to enlarge.</p><div class="research-tags"><span data-en="Campus" data-hi="कैंपस">Campus</span><span data-en="Highlights" data-hi="मुख्य बिंदु">Highlights</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CAMPUS GALLERY -->
+<section class="campus-life" id="gallery">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Campus Gallery" data-hi="कैंपस गैलरी">Campus Gallery</div>
+      <h2 data-en="A snapshot of academic life, seminars, workshops, and celebrations at MISH." data-hi="MISH में शैक्षणिक जीवन, सेमिनार, कार्यशालाओं और उत्सवों का एक स्नैपशॉट।">A snapshot of academic life, seminars, workshops, and celebrations at MISH.</h2>
+    </div>
+    <div class="campus-grid">
+      <div class="campus-card large" style="background-image: url('/mish/mish-01.png')"></div>
+      <div class="campus-card" style="background-image: url('/mish/mish-02.png')"></div>
+      <div class="campus-card" style="background-image: url('/mish/mish-04.png')"></div>
+      <div class="campus-card" style="background-image: url('/mish/mish-06.png')"></div>
+      <div class="campus-card" style="background-image: url('/mish/mish-07.png')"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ADMISSIONS -->
+<section class="admissions" id="admissions">
+  <div class="container">
+    <div class="admissions-inner">
+      <div class="admissions-text">
+        <div class="section-tag" data-en="Join Us" data-hi="हमसे जुड़ें">Join Us</div>
+        <h2 data-en="Admissions Open 2025–26" data-hi="प्रवेश खुले हैं 2025–26">Admissions Open 2025–26</h2>
+        <p data-en="Take the first step towards a clinical and academic career. Applications are open for BASLP, PGDEI, and M.Sc Audiology programs." data-hi="नैदानिक और शैक्षणिक करियर की ओर पहला कदम उठाएं। BASLP, PGDEI और M.Sc Audiology कार्यक्रमों के लिए आवेदन खुले हैं।">Take the first step towards a clinical and academic career. Applications are open for BASLP, PGDEI, and M.Sc Audiology programs.</p>
+        <div class="admission-steps">
+          <div class="step"><span>01</span><p data-en="Register Online" data-hi="ऑनलाइन पंजीकरण करें">Register Online</p></div>
+          <div class="step"><span>02</span><p data-en="Submit Documents" data-hi="दस्तावेज़ जमा करें">Submit Documents</p></div>
+          <div class="step"><span>03</span><p data-en="Counselling" data-hi="काउंसलिंग">Counselling</p></div>
+          <div class="step"><span>04</span><p data-en="Enroll" data-hi="नामांकन करें">Enroll</p></div>
+        </div>
+        <a href="#contact" class="btn-primary" data-en="Apply Now" data-hi="अभी आवेदन करें">Apply Now</a>
+      </div>
+      <div class="admissions-card-col">
+        <div class="contact-card">
+          <h3 data-en="Send a message" data-hi="संदेश भेजें">Send a message</h3>
+          <form onsubmit="return false;">
+            <input type="text" placeholder="Your full name" data-en-placeholder="Your full name" data-hi-placeholder="आपका पूरा नाम" data-te-placeholder="మీ పూర్తి పేరు">
+            <input type="email" placeholder="you@example.com" data-en-placeholder="you@example.com" data-hi-placeholder="you@example.com" data-te-placeholder="you@example.com">
+            <input type="tel" placeholder="+91 …" data-en-placeholder="+91 …" data-hi-placeholder="+91 …" data-te-placeholder="+91 …">
+            <select aria-label="Topic">
+              <option data-en="Admissions / Programs" data-hi="प्रवेश / कार्यक्रम">Admissions / Programs</option>
+              <option data-en="BASLP" data-hi="BASLP">BASLP</option>
+              <option data-en="PGDEI" data-hi="PGDEI">PGDEI</option>
+              <option data-en="M.Sc Audiology" data-hi="एम.एससी ऑडियोलॉजी">M.Sc Audiology</option>
+              <option data-en="Certificate Program" data-hi="सर्टिफिकेट कार्यक्रम">Certificate Program</option>
+            </select>
+            <button type="submit" class="btn-primary" data-en="Send message" data-hi="संदेश भेजें">Send message</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact-section" id="contact">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Get In Touch" data-hi="संपर्क करें">Get In Touch</div>
+      <h2 data-en="Reach Us" data-hi="हमसे जुड़ें">Reach Us</h2>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-info-card"><i class="fas fa-map-marker-alt"></i><h4 data-en="Address" data-hi="पता">Address</h4><p data-en="MISH Campus, Road No. 14, Banjara Hills, Hyderabad – 500034" data-hi="MISH परिसर, रोड नं. 14, बंजारा हिल्स, हैदराबाद – 500034">MISH Campus, Road No. 14, Banjara Hills, Hyderabad – 500034</p></div>
+      <div class="contact-info-card"><i class="fas fa-phone"></i><h4 data-en="Phone" data-hi="फोन">Phone</h4><p>+91 9100-072-758</p></div>
+      <div class="contact-info-card"><i class="fas fa-envelope"></i><h4 data-en="Email" data-hi="ईमेल">Email</h4><p>admin@mish.com</p></div>
+      <div class="contact-info-card"><i class="fas fa-clock"></i><h4 data-en="Office Hours" data-hi="कार्यालय समय">Office Hours</h4><p data-en="Mon – Sat: 9:00 AM – 5:00 PM" data-hi="सोम – शनि: सुबह 9 – शाम 5">Mon – Sat: 9:00 AM – 5:00 PM</p></div>
+    </div>
+    <div class="map-placeholder">
+      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3890.123456789!2d77.5!3d12.9!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTLCsDU0JzAwLjAiTiA3N8KwMzAnMDAuMCJF!5e0!3m2!1sen!2sin!4v1234567890" width="100%" height="320" style="border:0;border-radius:16px;" allowfullscreen="" loading="lazy"></iframe>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="main-footer">
+  <div class="footer-top">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col brand-col">
+          <div class="footer-logo">
+            <img class="logo-image small" src="https://mish.co.in/images/logo/mish-logo.png" alt="MISH logo">
+            <div>
+              <strong data-en="MAA Institute of Speech and Hearing" data-hi="माँ इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग">MAA Institute of Speech and Hearing</strong>
+              <p data-en="Learn. Heal. Inspire." data-hi="सीखो। ठीक करो। प्रेरित करो।">Learn. Heal. Inspire.</p>
+            </div>
+          </div>
+          <p class="footer-desc" data-en="MAA Institute of Speech and Hearing (MISH) is a comprehensive multi-purpose institute focusing on identification, intervention, rehabilitation and education of individuals with speech and hearing disorders." data-hi="MISH संचार विज्ञान, श्रवण देखभाल और समावेशी पुनर्वास में उत्कृष्टता के लिए प्रतिबद्ध है।">MAA Institute of Speech and Hearing (MISH) is a comprehensive multi-purpose institute focusing on identification, intervention, rehabilitation and education of individuals with speech and hearing disorders.</p>
+          <div class="social-links">
+            <a href="#"><i class="fab fa-facebook-f"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#"><i class="fab fa-youtube"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Quick Links" data-hi="त्वरित लिंक">Quick Links</h4>
+          <ul>
+            <li><a href="#about" data-en="About MISH" data-hi="MISH के बारे में">About MISH</a></li>
+            <li><a href="#vision-mission" data-en="Vision &amp; Mission" data-hi="दृष्टि और मिशन">Vision &amp; Mission</a></li>
+            <li><a href="#principal" data-en="Principal's Message" data-hi="प्राचार्य का संदेश">Principal's Message</a></li>
+            <li><a href="#departments" data-en="Departments" data-hi="विभाग">Departments</a></li>
+            <li><a href="#faculty" data-en="Faculty" data-hi="संकाय">Faculty</a></li>
+            <li><a href="#placements" data-en="Placements" data-hi="प्लेसमेंट">Placements</a></li>
+            <li><a href="#events" data-en="Events" data-hi="कार्यक्रम">Events</a></li>
+            <li><a href="#gallery" data-en="Gallery" data-hi="गैलरी">Gallery</a></li>
+            <li><a href="#admissions" data-en="Admissions" data-hi="प्रवेश">Admissions</a></li>
+            <li><a href="#contact" data-en="Contact" data-hi="संपर्क">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Academics" data-hi="शिक्षा">Academics</h4>
+          <ul>
+            <li><a href="#course-baslp">BASLP</a></li>
+            <li><a href="#course-pgdei">PGDEI</a></li>
+            <li><a href="#course-msc-audiology">M.Sc Audiology</a></li>
+            <li><a href="#academics">Certificate Programs</a></li>
+            <li><a href="#" data-en="Examination Cell" data-hi="परीक्षा सेल">Examination Cell</a></li>
+            <li><a href="#" data-en="Academic Calendar" data-hi="शैक्षणिक कैलेंडर">Academic Calendar</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Online Services" data-hi="ऑनलाइन सेवाएं">Online Services</h4>
+          <ul>
+            <li><a href="/login" data-en="Student Portal" data-hi="छात्र पोर्टल">Student Portal</a></li>
+            <li><a href="#" data-en="Fee Payment" data-hi="शुल्क भुगतान">Fee Payment</a></li>
+            <li><a href="#" data-en="Library Portal" data-hi="पुस्तकालय पोर्टल">Library Portal</a></li>
+            <li><a href="#" data-en="Placement Portal" data-hi="प्लेसमेंट पोर्टल">Placement Portal</a></li>
+            <li><a href="#" data-en="Grievance Redressal" data-hi="शिकायत निवारण">Grievance Redressal</a></li>
+            <li><a href="#" data-en="RTI" data-hi="RTI">RTI</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container">
+      <div class="footer-bottom-row footer-bottom-main">
+        <p data-en="© 2025 MAA Institute of Speech and Hearing (MISH). All Rights Reserved." data-hi="© 2025 माँ इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग (MISH)। सर्वाधिकार सुरक्षित।">© 2025 MAA Institute of Speech and Hearing (MISH). All Rights Reserved.</p>
+        <div class="footer-links">
+          <a href="#" data-en="Privacy Policy" data-hi="गोपनीयता नीति">Privacy Policy</a>
+          <a href="#" data-en="Terms of Use" data-hi="उपयोग की शर्तें">Terms of Use</a>
+          <a href="#" data-en="Sitemap" data-hi="साइटमैप">Sitemap</a>
+          <a href="#" data-en="Accessibility" data-hi="अभिगम्यता">Accessibility</a>
+        </div>
+      </div>
+      <div class="footer-bottom-row footer-visitors-row">
+        <div class="footer-visitors" aria-live="polite">
+          <i class="fas fa-eye" aria-hidden="true"></i>
+          <span class="footer-visitors-label" data-en="Site Visitors" data-hi="साइट आगंतुक">Site Visitors</span>
+          <span class="footer-visitors-count" id="visitorsCount">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<button class="back-to-top" id="backToTop" onclick="scrollToTop()"><i class="fas fa-arrow-up"></i></button>
+
+<div class="image-lightbox" id="imageLightbox" aria-hidden="true">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close image preview"><i class="fas fa-times"></i></button>
+  <img id="lightboxImage" src="" alt="Campus image preview">
+</div>
+<div class="faculty-modal" id="facultyModal" aria-hidden="true">
+  <div class="faculty-modal-card" role="dialog" aria-modal="true" aria-labelledby="facultyModalName">
+    <button class="faculty-modal-close" id="facultyModalClose" aria-label="Close faculty details">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="faculty-modal-head">
+      <div class="faculty-modal-avatar" id="facultyModalAvatar"></div>
+      <div>
+        <h3 id="facultyModalName">Faculty Name</h3>
+        <p id="facultyModalTitle">Designation</p>
+      </div>
+    </div>
+    <p class="faculty-modal-exp" id="facultyModalExp"></p>
+    <div class="faculty-modal-tags" id="facultyModalTags"></div>
+    <p class="faculty-modal-pub" id="facultyModalPub"></p>
+    <p class="faculty-modal-bio" id="facultyModalBio"></p>
+  </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>

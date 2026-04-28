@@ -1,5 +1,4 @@
 import { prisma, Role } from "@campusflow/db";
-import { resolveBatchAndSectionIds, type BatchSectionInput } from "../../lib/bulkImportResolvers";
 import { hashPassword } from "../auth/auth.service";
 import * as timetableSvc from "../timetable/timetable.service";
 
@@ -42,7 +41,6 @@ export async function listStudents(tenantId: string, batchId?: string, sectionId
           },
         },
         batch: { select: { name: true } },
-        section: { select: { name: true } },
       },
       orderBy: { rollNumber: "asc" },
     }),
@@ -54,6 +52,7 @@ export async function listStudents(tenantId: string, batchId?: string, sectionId
     firstName: string;
     lastName: string;
     email: string;
+    role: Role;
     isActive: boolean;
     portalAccessRestricted: boolean;
   }> = [];
@@ -61,12 +60,12 @@ export async function listStudents(tenantId: string, batchId?: string, sectionId
   if (!batchId?.trim() && !sectionId?.trim() && page === 1) {
     const userWhere: {
       tenantId: string;
-      role: typeof Role.PRESENT_STUDENT;
+      role: { in: Role[] };
       student: null;
       OR?: Array<Record<string, unknown>>;
     } = {
       tenantId,
-      role: Role.PRESENT_STUDENT,
+      role: { in: [Role.STUDENT, Role.GUEST_STUDENT] },
       student: null,
     };
     if (search?.trim()) {
@@ -84,6 +83,7 @@ export async function listStudents(tenantId: string, batchId?: string, sectionId
         firstName: true,
         lastName: true,
         email: true,
+        role: true,
         isActive: true,
         portalAccessRestricted: true,
       },
@@ -95,6 +95,7 @@ export async function listStudents(tenantId: string, batchId?: string, sectionId
       firstName: u.firstName,
       lastName: u.lastName,
       email: u.email,
+      role: u.role,
       isActive: u.isActive,
       portalAccessRestricted: u.portalAccessRestricted,
     }));
@@ -187,12 +188,16 @@ export async function getStudent(tenantId: string, id: string) {
         },
       },
       batch: { select: { id: true, name: true } },
-      section: { select: { id: true, name: true } },
     },
   });
   if (!student) throw new Error("Student not found");
 
-  const scheduleToday = await timetableSvc.listTodaysSlotsForStudent(tenantId, id);
+  let scheduleToday: { dayName: string; slots: unknown[] } = { dayName: "Today", slots: [] };
+  try {
+    scheduleToday = await timetableSvc.listTodaysSlotsForStudent(tenantId, id);
+  } catch {
+    // Student details should still open even if timetable data cannot be resolved.
+  }
   return { ...student, scheduleToday };
 }
 
@@ -226,16 +231,6 @@ async function assertAdmissionFeePaid(tenantId: string, userId: string) {
   }
 }
 
-async function resolveNewUserPassword(plain?: string | null): Promise<string> {
-  const p = plain?.trim() || process.env.DEFAULT_NEW_USER_PASSWORD?.trim();
-  if (!p || p.length < 8) {
-    throw new Error(
-      "Set DEFAULT_NEW_USER_PASSWORD in .env (min 8 characters) or pass an explicit password for each user."
-    );
-  }
-  return hashPassword(p);
-}
-
 function parseOptionalDateOnly(iso?: string | null): Date | undefined {
   if (!iso?.trim()) return undefined;
   const d = new Date(iso);
@@ -243,7 +238,10 @@ function parseOptionalDateOnly(iso?: string | null): Date | undefined {
   return d;
 }
 
-export type StudentBatchSectionInput = BatchSectionInput;
+type StudentBatchInput = {
+  batchId?: string | null;
+  batchName?: string | null;
+};
 
 /** Creates a student User + Student profile in one step (no invite, no applicant-fee gate). */
 export async function createStudentWithUser(
@@ -252,6 +250,7 @@ export async function createStudentWithUser(
     email: string;
     firstName: string;
     lastName: string;
+    role?: "STUDENT" | "GUEST_STUDENT";
     password?: string | null;
     phone?: string | null;
     dateOfBirth?: string | null;
@@ -259,8 +258,9 @@ export async function createStudentWithUser(
     parentName?: string | null;
     parentPhone?: string | null;
     address?: string | null;
-  } & StudentBatchSectionInput
+  } & StudentBatchInput
 ) {
+  const targetRole = input.role === Role.GUEST_STUDENT ? Role.GUEST_STUDENT : Role.STUDENT;
   const email = input.email.trim().toLowerCase();
   const rollExists = await prisma.student.findUnique({
     where: { tenantId_rollNumber: { tenantId, rollNumber: input.rollNumber.trim() } },
@@ -272,41 +272,28 @@ export async function createStudentWithUser(
     include: { student: { select: { id: true } } },
   });
 
-  const { batchId, sectionId } = await resolveBatchAndSectionIds(tenantId, input);
+  const resolveBatchId = async (): Promise<string> => {
+    const byId = input.batchId?.trim();
+    if (byId) {
+      const batch = await prisma.batch.findFirst({ where: { id: byId, tenantId }, select: { id: true } });
+      if (!batch) throw new Error("Batch not found");
+      return batch.id;
+    }
+    const byName = input.batchName?.trim();
+    if (!byName) throw new Error("Provide batchName or batchId.");
+    const rows = await prisma.batch.findMany({
+      where: { tenantId, name: { equals: byName, mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (rows.length === 0) throw new Error(`Batch not found: "${byName}"`);
+    if (rows.length > 1) throw new Error(`Multiple batches match "${byName}". Use Batch ID.`);
+    return rows[0]!.id;
+  };
+
+  const batchId = await resolveBatchId();
 
   if (!existingUser) {
-    const hashed = await resolveNewUserPassword(input.password);
-
-    return prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          tenantId,
-          email,
-          password: hashed,
-          firstName: input.firstName.trim(),
-          lastName: input.lastName.trim(),
-          role: Role.PRESENT_STUDENT,
-          phone: input.phone?.trim() || null,
-          dateOfBirth: parseOptionalDateOnly(input.dateOfBirth) ?? null,
-        },
-      });
-
-      const created = await tx.student.create({
-        data: {
-          userId: user.id,
-          tenantId,
-          batchId,
-          sectionId,
-          rollNumber: input.rollNumber.trim(),
-          parentName: input.parentName?.trim() || null,
-          parentPhone: input.parentPhone?.trim() || null,
-          address: input.address?.trim() || null,
-        },
-        include: { user: { select: { firstName: true, lastName: true, email: true } }, batch: true },
-      });
-
-      return created;
-    });
+    throw new Error("User account not found. Create the user in Users first, then complete the student profile.");
   }
 
   if (existingUser.student) {
@@ -314,7 +301,7 @@ export async function createStudentWithUser(
       "This email already has a student profile. Open that student from the list or use a different email."
     );
   }
-  if (existingUser.role !== Role.PRESENT_STUDENT) {
+  if (existingUser.role !== Role.STUDENT && existingUser.role !== Role.GUEST_STUDENT) {
     throw new Error(
       "An account with this email already exists with another role. Use a different email or ask an administrator to adjust the account."
     );
@@ -332,7 +319,7 @@ export async function createStudentWithUser(
         lastName: input.lastName.trim(),
         phone: input.phone?.trim() || null,
         dateOfBirth: parseOptionalDateOnly(input.dateOfBirth) ?? null,
-        role: Role.PRESENT_STUDENT,
+        role: targetRole,
         isActive: true,
         ...passwordUpdate,
       },
@@ -343,7 +330,7 @@ export async function createStudentWithUser(
         userId: existingUser.id,
         tenantId,
         batchId,
-        sectionId,
+        sectionId: null,
         rollNumber: input.rollNumber.trim(),
         parentName: input.parentName?.trim() || null,
         parentPhone: input.parentPhone?.trim() || null,
@@ -403,7 +390,7 @@ export async function createStudentProfile(
   userId: string,
   data: { batchId: string; sectionId: string; rollNumber: string; parentName?: string; parentPhone?: string; address?: string }
 ) {
-  const user = await prisma.user.findFirst({ where: { id: userId, tenantId, role: "PRESENT_STUDENT" } });
+  const user = await prisma.user.findFirst({ where: { id: userId, tenantId, role: "STUDENT" } });
   if (!user) throw new Error("User not found or not a student");
 
   const existing = await prisma.student.findUnique({ where: { userId } });

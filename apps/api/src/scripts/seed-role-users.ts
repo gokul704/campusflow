@@ -60,13 +60,15 @@ const ROLE_ROWS: Row[] = [
   { role: Role.CMD, key: "cmd", firstName: "Dr. Suresh", lastName: "Ramachandran" },
   { role: Role.PRINCIPAL, key: "principal", firstName: "Dr. Deepa", lastName: "Krishnamurthy" },
   // Staff
-  { role: Role.STAFF, key: "staff", firstName: "Karthik", lastName: "Subramanian" },
-  // Operations
-  { role: Role.OPERATIONS_LECTURER, key: "lecturer", firstName: "Anitha", lastName: "Mohan" },
-  { role: Role.OPERATIONS_HR, key: "hr", firstName: "Meera", lastName: "Krishnan" },
-  { role: Role.OPERATIONS_FRONT_DESK, key: "frontdesk", firstName: "Divya", lastName: "Ramesh" },
+  { role: Role.ASSISTANT_PROFESSOR, key: "assistant-professor", firstName: "Anitha", lastName: "Mohan" },
+  { role: Role.PROFESSOR, key: "professor", firstName: "Karthik", lastName: "Subramanian" },
+  { role: Role.CLINICAL_STAFF, key: "clinical-staff", firstName: "Meera", lastName: "Krishnan" },
+  { role: Role.GUEST_PROFESSOR, key: "guest-professor", firstName: "Divya", lastName: "Ramesh" },
+  { role: Role.OPERATIONS, key: "operations", firstName: "Priya", lastName: "Nair" },
+  { role: Role.ACCOUNTS, key: "accounts", firstName: "Arvind", lastName: "Iyer" },
+  { role: Role.IT_STAFF, key: "it-staff", firstName: "Nikhil", lastName: "Rao" },
   // Students
-  { role: Role.PRESENT_STUDENT, key: "student", firstName: "Arjun", lastName: "Venkatesh" },
+  { role: Role.STUDENT, key: "student", firstName: "Arjun", lastName: "Venkatesh" },
   { role: Role.ALUMNI, key: "alumni", firstName: "Sanjay", lastName: "Iyer" },
   { role: Role.GUEST_STUDENT, key: "guest", firstName: "Neha", lastName: "Kapoor" },
 ];

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authFetch, formatApiError } from "@/lib/api";
 import { dash } from "@/lib/dashboardUi";
+import { isLeadershipRole } from "@/lib/leadershipRoles";
 
 interface Profile {
   id: string;
@@ -19,18 +20,19 @@ interface Profile {
   levelLabel: string | null;
 }
 
-const LEADERSHIP_ROLES = new Set(["ADMIN", "CMD", "PRINCIPAL"]);
-const PORTAL_MANAGERS = new Set(LEADERSHIP_ROLES);
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrator",
   CMD: "CMD (Managing Director)",
   PRINCIPAL: "Principal",
-  STAFF: "Staff",
-  OPERATIONS_LECTURER: "Operations — Lecturer",
-  OPERATIONS_HR: "Operations — HR",
-  OPERATIONS_FRONT_DESK: "Operations — Front desk",
-  PRESENT_STUDENT: "Present student",
+  ASSISTANT_PROFESSOR: "Assistant Professor",
+  PROFESSOR: "Professor",
+  CLINICAL_STAFF: "Clinical Staff",
+  GUEST_PROFESSOR: "Guest Professor",
+  OPERATIONS: "Operations",
+  ACCOUNTS: "Accounts",
+  IT_STAFF: "IT Staff",
+  STUDENT: "Student",
   ALUMNI: "Alumni",
   GUEST_STUDENT: "Guest student",
 };
@@ -63,6 +65,7 @@ export default function SettingsPage() {
     }>
   >([]);
   const [restrictedErr, setRestrictedErr] = useState<string | null>(null);
+  const [allowed, setAllowed] = useState<boolean | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,7 +94,16 @@ export default function SettingsPage() {
   }, [load]);
 
   useEffect(() => {
-    if (!profile || !PORTAL_MANAGERS.has(profile.role)) return;
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        setAllowed(Boolean(d?.modules?.settings?.view));
+      })
+      .catch(() => setAllowed(false));
+  }, []);
+
+  useEffect(() => {
+    if (!profile || !isLeadershipRole(profile.role)) return;
     authFetch("/api/students/restricted")
       .then(async (r) => {
         const d = await r.json().catch(() => null);
@@ -170,11 +182,23 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) {
+  if (loading || allowed == null) {
     return (
       <div>
         <h1 className={dash.pageTitle}>Settings</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <div className={`${dash.card} p-6`}>
+        <h1 className={dash.pageTitle}>Settings</h1>
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">You do not have access to Settings.</p>
+        <Link href="/dashboard" className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+          Back to dashboard
+        </Link>
       </div>
     );
   }
@@ -196,16 +220,24 @@ export default function SettingsPage() {
           Personal information and password. Role and designation come from your account; contact an administrator to
           change your role.
         </p>
-        {LEADERSHIP_ROLES.has(profile.role) && (
+        {isLeadershipRole(profile.role) && (
           <p className="mt-2 text-sm">
             <Link href="/dashboard/settings/permissions" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-              User profile permissions (tenant access matrix)
+              Roles & permissions — set what each role can view and do in the portal
             </Link>
+            {" "}
+            <span className="text-gray-500 dark:text-gray-400">
+              (To change an individual user&apos;s job role, use{" "}
+              <Link href="/dashboard/users" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                Users
+              </Link>
+              .)
+            </span>
           </p>
         )}
       </div>
 
-      {PORTAL_MANAGERS.has(profile.role) && (
+      {isLeadershipRole(profile.role) && (
         <section className={`${dash.card} p-6`}>
           <h2 className={dash.sectionTitle}>Restricted portal access</h2>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

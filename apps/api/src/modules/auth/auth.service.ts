@@ -141,7 +141,14 @@ export async function getMeProfile(userId: string, tenantId: string) {
       role: true,
       dateOfBirth: true,
       isActive: true,
-      student: { select: { rollNumber: true, batch: { select: { name: true } } } },
+      student: {
+        select: {
+          id: true,
+          batchId: true,
+          rollNumber: true,
+          batch: { select: { name: true } },
+        },
+      },
       faculty: { select: { designation: true, department: { select: { name: true, code: true } } } },
     },
   });
@@ -165,6 +172,9 @@ export async function getMeProfile(userId: string, tenantId: string) {
     isActive: user.isActive,
     designation,
     levelLabel,
+    studentProfile: user.student
+      ? { id: user.student.id, batchId: user.student.batchId, rollNumber: user.student.rollNumber }
+      : null,
   };
 }
 

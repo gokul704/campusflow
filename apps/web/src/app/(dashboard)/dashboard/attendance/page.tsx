@@ -23,8 +23,9 @@ interface AttendanceRecord {
 
 interface BatchCourseOption {
   id: string;
+  batchId?: string;
   semester: number;
-  batch: { id: string; name: string };
+  batch: { id?: string; name: string };
   course: { name: string; code: string };
   section?: { name: string };
 }
@@ -109,6 +110,8 @@ function attendanceRowFromExcel(r: Record<string, unknown>): AttendanceImportRow
 }
 
 export default function AttendancePage() {
+  const [role, setRole] = useState("");
+  const [canManageAttendance, setCanManageAttendance] = useState(false);
   const [activeTab, setActiveTab] = useState<"mark" | "view">("mark");
   const [batchCourses, setBatchCourses] = useState<BatchCourseOption[]>([]);
 
@@ -139,36 +142,83 @@ export default function AttendancePage() {
   const [importSubmitError, setImportSubmitError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
 
+  async function loadSummary(batchCourseId: string) {
+    if (!batchCourseId) {
+      setSummary([]);
+      return;
+    }
+    setLoadingSummary(true);
+    try {
+      const sRes = await authFetch(`/api/attendance/summary/${batchCourseId}`);
+      if (!sRes.ok) {
+        setSummary([]);
+        return;
+      }
+      const sData = await sRes.json();
+      setSummary(Array.isArray(sData) ? sData : sData.summary ?? []);
+    } catch {
+      setSummary([]);
+    } finally {
+      setLoadingSummary(false);
+    }
+  }
+
   useEffect(() => {
     authFetch("/api/batch-courses")
       .then(r => r.json())
       .then(d => setBatchCourses(Array.isArray(d) ? d : d.batchCourses ?? []));
   }, []);
 
+  useEffect(() => {
+    authFetch("/api/auth/me")
+      .then(r => r.json())
+      .then(d => setRole(String(d?.user?.role ?? "")))
+      .catch(() => setRole(""));
+    authFetch("/api/auth/permissions")
+      .then(r => r.json())
+      .then(d => setCanManageAttendance(Boolean(d?.modules?.attendance?.create)))
+      .catch(() => setCanManageAttendance(false));
+  }, []);
+
+  const isStudentRole = role === "STUDENT" || role === "GUEST_STUDENT";
+
   async function loadStudents() {
     if (!markBatchCourseId) return;
     setLoadingStudents(true);
     setSaveSuccess(false);
     setSaveError("");
-    const bc = batchCourses.find(b => b.id === markBatchCourseId);
-    if (!bc) { setLoadingStudents(false); return; }
-    const res = await authFetch(`/api/students?batchId=${bc.batch.id}&limit=200`);
-    const data = await res.json();
-    const list: Student[] = data.students ?? data ?? [];
-    setStudents(list);
-    const initial: Record<string, StudentStatus> = {};
-    list.forEach(s => { initial[s.id] = "PRESENT"; });
-    setStudentStatuses(initial);
-    setLoadingStudents(false);
-
-    // Load summary
-    setLoadingSummary(true);
-    const sRes = await authFetch(`/api/attendance/summary/${markBatchCourseId}`);
-    if (sRes.ok) {
-      const sData = await sRes.json();
-      setSummary(Array.isArray(sData) ? sData : sData.summary ?? []);
+    try {
+      const bc = batchCourses.find(b => b.id === markBatchCourseId);
+      if (!bc) {
+        setSaveError("Selected batch course not found.");
+        setStudents([]);
+        return;
+      }
+      const batchId = bc.batchId || bc.batch?.id;
+      if (!batchId) {
+        setSaveError("Batch is missing for this course. Please reassign the batch course and try again.");
+        setStudents([]);
+        return;
+      }
+      const res = await authFetch(`/api/students?batchId=${encodeURIComponent(batchId)}&limit=200`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSaveError(formatApiError(data) || "Failed to load students");
+        setStudents([]);
+        return;
+      }
+      const list: Student[] = Array.isArray(data?.students) ? data.students : Array.isArray(data) ? data : [];
+      setStudents(list);
+      const initial: Record<string, StudentStatus> = {};
+      list.forEach(s => { initial[s.id] = "PRESENT"; });
+      setStudentStatuses(initial);
+      await loadSummary(markBatchCourseId);
+    } catch {
+      setSaveError("Failed to load students");
+      setStudents([]);
+    } finally {
+      setLoadingStudents(false);
     }
-    setLoadingSummary(false);
   }
 
   async function saveAttendance() {
@@ -185,14 +235,16 @@ export default function AttendancePage() {
       const data = await res.json();
       if (!res.ok) { setSaveError(data.error ?? "Failed to save attendance"); return; }
       setSaveSuccess(true);
+      await loadSummary(markBatchCourseId);
     } catch { setSaveError("Something went wrong"); }
     finally { setSavingAttendance(false); }
   }
 
   async function fetchRecords() {
-    if (!viewBatchCourseId) return;
+    if (!isStudentRole && !viewBatchCourseId) return;
     setLoadingRecords(true);
-    const p = new URLSearchParams({ batchCourseId: viewBatchCourseId });
+    const p = new URLSearchParams();
+    if (!isStudentRole) p.set("batchCourseId", viewBatchCourseId);
     if (viewStartDate) p.set("startDate", viewStartDate);
     if (viewEndDate) p.set("endDate", viewEndDate);
     const res = await authFetch(`/api/attendance?${p}`);
@@ -202,10 +254,10 @@ export default function AttendancePage() {
   }
 
   useEffect(() => {
-    if (activeTab === "view" && viewBatchCourseId) {
+    if (activeTab === "view" && (isStudentRole || viewBatchCourseId)) {
       fetchRecords();
     }
-  }, [activeTab, viewBatchCourseId, viewStartDate, viewEndDate]);
+  }, [activeTab, viewBatchCourseId, viewStartDate, viewEndDate, isStudentRole]);
 
   function openImport() {
     setImportRows([]);
@@ -304,49 +356,53 @@ export default function AttendancePage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Attendance</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("attendance-import-template.xlsx", "Attendance", [
-                "Batch Name",
-                "Section Name",
-                "Course Code",
-                "Semester",
-                "Date",
-                "Roll Number",
-                "Student Email",
-                "Status",
-              ])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-        </div>
+        {canManageAttendance && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadExcelTemplate("attendance-import-template.xlsx", "Attendance", [
+                  "Batch Name",
+                  "Section Name",
+                  "Course Code",
+                  "Semester",
+                  "Date",
+                  "Roll Number",
+                  "Student Email",
+                  "Status",
+                ])
+              }
+              className={dash.btnSecondary}
+            >
+              Download Excel template
+            </button>
+            <button type="button" onClick={openImport} className={dash.btnSecondary}>
+              Import Excel
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mb-6 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("mark")}
-          className={activeTab === "mark" ? dash.tabActive : dash.tabInactive}
-        >
-          Mark Attendance
-        </button>
+        {canManageAttendance && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("mark")}
+            className={activeTab === "mark" ? dash.tabActive : dash.tabInactive}
+          >
+            Mark Attendance
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setActiveTab("view")}
           className={activeTab === "view" ? dash.tabActive : dash.tabInactive}
         >
-          View Records
+          {isStudentRole ? "My Attendance" : "View Records"}
         </button>
       </div>
 
-      {activeTab === "mark" && (
+      {canManageAttendance && activeTab === "mark" && (
         <div className="space-y-6">
           <div className={`${dash.card} ${dash.cardToolbar}`}>
             <div>
@@ -382,13 +438,19 @@ export default function AttendancePage() {
               {loadingStudents ? "Loading..." : "Load Students"}
             </button>
           </div>
+          {markBatchCourseId && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Click <strong>Load Students</strong>, mark statuses in the student list, then click <strong>Save Attendance</strong>.
+              The summary below shows saved historical totals.
+            </p>
+          )}
 
           {students.length > 0 && (
             <div className={dash.tableWrap}>
               <div className={dash.tableHeaderBar}>
                 <span className={`text-sm font-medium text-gray-700 dark:text-gray-200`}>{students.length} students</span>
                 <div className="flex gap-2">
-                  {(["PRESENT", "ABSENT", "LATE", "EXCUSED"] as StudentStatus[]).map(s => (
+                  {(["PRESENT", "ABSENT", "LATE"] as StudentStatus[]).map(s => (
                     <button
                       type="button"
                       key={s}
@@ -474,7 +536,11 @@ export default function AttendancePage() {
                     {loadingSummary ? (
                       <tr><td colSpan={8} className={dash.emptyCell}>Loading summary...</td></tr>
                     ) : summary.length === 0 ? (
-                      <tr><td colSpan={8} className={dash.emptyCell}>No attendance data yet</td></tr>
+                      <tr>
+                        <td colSpan={8} className={dash.emptyCell}>
+                          No saved attendance yet for this batch course. Mark and save attendance first.
+                        </td>
+                      </tr>
                     ) : summary.map(row => (
                       <tr key={row.studentId} className={dash.rowHover}>
                         <td className={`px-4 py-3 ${dash.cellStrong}`}>{row.studentName}</td>
@@ -502,21 +568,23 @@ export default function AttendancePage() {
       {activeTab === "view" && (
         <div className="space-y-4">
           <div className={`${dash.card} ${dash.cardToolbar}`}>
-            <div>
-              <label className={dash.labelSmall}>Batch Course</label>
-              <select
-                value={viewBatchCourseId}
-                onChange={e => setViewBatchCourseId(e.target.value)}
-                className={`${dash.select} ${dash.selectMin}`}
-              >
-                <option value="">Select batch course</option>
-                {batchCourses.map(bc => (
-                  <option key={bc.id} value={bc.id}>
-                    {bc.batch.name}{bc.section ? ` / ${bc.section.name}` : ""} — {bc.course.name} (Sem {bc.semester})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!isStudentRole && (
+              <div>
+                <label className={dash.labelSmall}>Batch Course</label>
+                <select
+                  value={viewBatchCourseId}
+                  onChange={e => setViewBatchCourseId(e.target.value)}
+                  className={`${dash.select} ${dash.selectMin}`}
+                >
+                  <option value="">Select batch course</option>
+                  {batchCourses.map(bc => (
+                    <option key={bc.id} value={bc.id}>
+                      {bc.batch.name}{bc.section ? ` / ${bc.section.name}` : ""} — {bc.course.name} (Sem {bc.semester})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className={dash.labelSmall}>From</label>
               <input
@@ -538,7 +606,7 @@ export default function AttendancePage() {
             <button
               type="button"
               onClick={fetchRecords}
-              disabled={!viewBatchCourseId}
+              disabled={!isStudentRole && !viewBatchCourseId}
               className={dash.btnPrimary}
             >
               Search
@@ -550,25 +618,27 @@ export default function AttendancePage() {
               <thead className={dash.thead}>
                 <tr>
                   <th className={dash.th}>Date</th>
-                  <th className={dash.th}>Student</th>
-                  <th className={dash.th}>Roll No</th>
+                  {!isStudentRole && <th className={dash.th}>Student</th>}
+                  {!isStudentRole && <th className={dash.th}>Roll No</th>}
                   <th className={dash.th}>Status</th>
                 </tr>
               </thead>
               <tbody className={dash.tbodyDivide}>
                 {loadingRecords ? (
-                  <tr><td colSpan={4} className={dash.emptyCell}>Loading...</td></tr>
+                  <tr><td colSpan={isStudentRole ? 2 : 4} className={dash.emptyCell}>Loading...</td></tr>
                 ) : records.length === 0 ? (
-                  <tr><td colSpan={4} className={dash.emptyCell}>
-                    {viewBatchCourseId ? "No records found" : "Select a batch course to view records"}
+                  <tr><td colSpan={isStudentRole ? 2 : 4} className={dash.emptyCell}>
+                    {isStudentRole ? "No attendance records found" : viewBatchCourseId ? "No records found" : "Select a batch course to view records"}
                   </td></tr>
                 ) : records.map(r => (
                   <tr key={r.id} className={dash.rowHover}>
                     <td className={`px-4 py-3 ${dash.cellMuted}`}>{new Date(r.date).toLocaleDateString()}</td>
-                    <td className={`px-4 py-3 ${dash.cellStrong}`}>
-                      {r.student.user.firstName} {r.student.user.lastName}
-                    </td>
-                    <td className={`px-4 py-3 ${dash.cellMono}`}>{r.student.rollNumber ?? "—"}</td>
+                    {!isStudentRole && (
+                      <td className={`px-4 py-3 ${dash.cellStrong}`}>
+                        {r.student.user.firstName} {r.student.user.lastName}
+                      </td>
+                    )}
+                    {!isStudentRole && <td className={`px-4 py-3 ${dash.cellMono}`}>{r.student.rollNumber ?? "—"}</td>}
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[r.status]}`}>
                         {r.status}
@@ -582,7 +652,7 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {showImport && (
+      {canManageAttendance && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-h-[90vh] max-w-lg overflow-y-auto`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import attendance</h2>

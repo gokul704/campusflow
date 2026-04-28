@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { authFetch } from "@/lib/api";
+import { authFetch, formatApiError } from "@/lib/api";
 import { dash } from "@/lib/dashboardUi";
 import CreateUserModal from "./CreateUserModal";
 
 interface User {
   id: string;
   email: string;
+  phone?: string | null;
   firstName: string;
   lastName: string;
   role: string;
@@ -15,15 +16,34 @@ interface User {
   createdAt: string;
 }
 
+const CHANGEABLE_ROLES = [
+  "ADMIN",
+  "CMD",
+  "PRINCIPAL",
+  "ASSISTANT_PROFESSOR",
+  "PROFESSOR",
+  "CLINICAL_STAFF",
+  "GUEST_PROFESSOR",
+  "OPERATIONS",
+  "ACCOUNTS",
+  "IT_STAFF",
+  "STUDENT",
+  "ALUMNI",
+  "GUEST_STUDENT",
+] as const;
+
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300",
   CMD: "bg-rose-100 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200",
   PRINCIPAL: "bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300",
-  STAFF: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100",
-  OPERATIONS_LECTURER: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-  OPERATIONS_HR: "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/40 dark:text-cyan-200",
-  OPERATIONS_FRONT_DESK: "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
-  PRESENT_STUDENT: "bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300",
+  ASSISTANT_PROFESSOR: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
+  PROFESSOR: "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
+  CLINICAL_STAFF: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100",
+  GUEST_PROFESSOR: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
+  OPERATIONS: "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/40 dark:text-cyan-200",
+  ACCOUNTS: "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+  IT_STAFF: "bg-orange-100 text-orange-900 dark:bg-orange-950/40 dark:text-orange-200",
+  STUDENT: "bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300",
   ALUMNI: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300",
   GUEST_STUDENT: "bg-teal-100 text-teal-900 dark:bg-teal-950/40 dark:text-teal-200",
 };
@@ -35,7 +55,18 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
+  const [meRole, setMeRole] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [roleEditUser, setRoleEditUser] = useState<User | null>(null);
+  const [roleEditValue, setRoleEditValue] = useState<string>("ASSISTANT_PROFESSOR");
+  const [roleEditErr, setRoleEditErr] = useState("");
+  const [roleEditLoading, setRoleEditLoading] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ firstName: "", lastName: "", phone: "" });
+  const [editErr, setEditErr] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+
+  const isLeadership = meRole === "ADMIN" || meRole === "CMD" || meRole === "PRINCIPAL";
 
   const searchRef = useRef(search);
   const roleRef = useRef(role);
@@ -66,6 +97,13 @@ export default function UsersPage() {
     void fetchUsers();
   }, [fetchUsers]);
 
+  useEffect(() => {
+    authFetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d: { user?: { role?: string } }) => setMeRole(d?.user?.role ?? null))
+      .catch(() => setMeRole(null));
+  }, []);
+
   // Debounce search only — do not depend on `fetchUsers` or pagination resets when page/role changes
   useEffect(() => {
     const t = setTimeout(() => {
@@ -82,6 +120,76 @@ export default function UsersPage() {
     void fetchUsers();
   }
 
+  function openRoleEditor(user: User) {
+    setRoleEditUser(user);
+    setRoleEditValue(user.role);
+    setRoleEditErr("");
+  }
+
+  function openEditUser(user: User) {
+    setEditUser(user);
+    setEditForm({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone ?? "",
+    });
+    setEditErr("");
+  }
+
+  async function submitEditUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editUser) return;
+    setEditErr("");
+    setEditLoading(true);
+    try {
+      const body: Record<string, string> = {
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+      };
+      const ph = editForm.phone.trim();
+      if (ph) body.phone = ph;
+      const res = await authFetch(`/api/users/${editUser.id}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEditErr(formatApiError(data));
+        return;
+      }
+      setEditUser(null);
+      void fetchUsers();
+    } catch {
+      setEditErr("Update failed");
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
+  async function submitRoleChange(e: React.FormEvent) {
+    e.preventDefault();
+    if (!roleEditUser) return;
+    setRoleEditErr("");
+    setRoleEditLoading(true);
+    try {
+      const res = await authFetch(`/api/users/${roleEditUser.id}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role: roleEditValue }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRoleEditErr(formatApiError(data));
+        return;
+      }
+      setRoleEditUser(null);
+      void fetchUsers();
+    } catch {
+      setRoleEditErr("Role update failed");
+    } finally {
+      setRoleEditLoading(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -91,13 +199,11 @@ export default function UsersPage() {
             New accounts appear here immediately. Students are created from the Students page (with roll, batch, and section). Use the institute default password in API .env unless you set one per user.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className={dash.btnPrimary}
-        >
-          + Create user
-        </button>
+        {isLeadership && (
+          <button type="button" onClick={() => setShowCreate(true)} className={dash.btnPrimary}>
+            + Create user
+          </button>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -117,11 +223,14 @@ export default function UsersPage() {
           <option value="ADMIN">Admin</option>
           <option value="CMD">CMD (Managing Director)</option>
           <option value="PRINCIPAL">Principal</option>
-          <option value="STAFF">Staff</option>
-          <option value="OPERATIONS_LECTURER">Operations — Lecturer</option>
-          <option value="OPERATIONS_HR">Operations — HR</option>
-          <option value="OPERATIONS_FRONT_DESK">Operations — Front desk</option>
-          <option value="PRESENT_STUDENT">Present student</option>
+          <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
+          <option value="PROFESSOR">Professor</option>
+          <option value="CLINICAL_STAFF">Clinical Staff</option>
+          <option value="GUEST_PROFESSOR">Guest Professor</option>
+          <option value="OPERATIONS">Operations</option>
+          <option value="ACCOUNTS">Accounts</option>
+          <option value="IT_STAFF">IT Staff</option>
+          <option value="STUDENT">Student</option>
           <option value="ALUMNI">Alumni</option>
           <option value="GUEST_STUDENT">Guest student</option>
         </select>
@@ -160,13 +269,33 @@ export default function UsersPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleActive(user)}
-                    className="text-xs text-gray-500 transition hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                  >
-                    {user.isActive ? "Deactivate" : "Activate"}
-                  </button>
+                  {isLeadership ? (
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                      <button
+                        type="button"
+                        onClick={() => openEditUser(user)}
+                        className="text-xs text-emerald-600 transition hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openRoleEditor(user)}
+                        className="text-xs text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        Change role
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(user)}
+                        className="text-xs text-gray-500 transition hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                      >
+                        {user.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className={`text-xs ${dash.cellMuted}`}>—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -184,7 +313,7 @@ export default function UsersPage() {
         )}
       </div>
 
-      {showCreate && (
+      {isLeadership && showCreate && (
         <CreateUserModal
           onClose={() => setShowCreate(false)}
           onSuccess={() => {
@@ -193,6 +322,104 @@ export default function UsersPage() {
             void fetchUsers(1);
           }}
         />
+      )}
+
+      {isLeadership && editUser && (
+        <div className={dash.modalOverlay}>
+          <div className={dash.modalPanel}>
+            <h2 className={`${dash.sectionTitle} mb-2`}>Edit user</h2>
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">{editUser.email}</p>
+            {editErr && <div className={`${dash.errorBanner} mb-3`}>{editErr}</div>}
+            <form onSubmit={submitEditUser} className="space-y-3">
+              <div>
+                <label className={dash.label}>First name</label>
+                <input
+                  type="text"
+                  value={editForm.firstName}
+                  onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
+                  required
+                  className={dash.input}
+                />
+              </div>
+              <div>
+                <label className={dash.label}>Last name</label>
+                <input
+                  type="text"
+                  value={editForm.lastName}
+                  onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
+                  required
+                  className={dash.input}
+                />
+              </div>
+              <div>
+                <label className={dash.label}>Phone (optional)</label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  className={dash.input}
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Email cannot be changed here.</p>
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditUser(null)}
+                  className={`flex-1 ${dash.btnSecondary}`}
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={editLoading} className={`flex-1 ${dash.btnPrimary}`}>
+                  {editLoading ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isLeadership && roleEditUser && (
+        <div className={dash.modalOverlay}>
+          <div className={dash.modalPanel}>
+            <h2 className={`${dash.sectionTitle} mb-2`}>Change role</h2>
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+              {roleEditUser.firstName} {roleEditUser.lastName} ({roleEditUser.email})
+            </p>
+            {roleEditErr && <div className={`${dash.errorBanner} mb-3`}>{roleEditErr}</div>}
+            <form onSubmit={submitRoleChange} className="space-y-3">
+              <div>
+                <label className={dash.label}>New role</label>
+                <select
+                  value={roleEditValue}
+                  onChange={(e) => setRoleEditValue(e.target.value)}
+                  className={dash.selectFull}
+                >
+                  {CHANGEABLE_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Student and Guest Student can be switched between each other. Faculty-role assignment still needs the
+                dedicated create-user flow (for department/designation capture).
+              </p>
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setRoleEditUser(null)}
+                  className={`flex-1 ${dash.btnSecondary}`}
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={roleEditLoading} className={`flex-1 ${dash.btnPrimary}`}>
+                  {roleEditLoading ? "Saving…" : "Save role"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

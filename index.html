@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MISH — MAA Institute of Speech and Hearing</title>
+<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<!-- PLACEMENT POPUP ANNOUNCEMENT -->
+<div id="placementPopup" class="popup-overlay">
+  <div class="popup-box">
+    <button class="popup-close" onclick="closePopup()"><i class="fas fa-times"></i></button>
+    <div class="popup-header">
+      <div class="popup-badge">🎉 <span data-en="PLACEMENT NEWS 2024–25" data-hi="प्लेसमेंट समाचार 2024–25">PLACEMENT NEWS 2024–25</span></div>
+      <h2 data-en="Record-Breaking Placements!" data-hi="रिकॉर्ड-तोड़ प्लेसमेंट!">Record-Breaking Placements!</h2>
+      <p data-en="Our students secured top offers from 150+ companies across India & abroad." data-hi="हमारे छात्रों ने भारत और विदेश में 150+ कंपनियों से शीर्ष ऑफर प्राप्त किए।">Our students secured top offers from 150+ companies across India &amp; abroad.</p>
+    </div>
+    <div class="popup-stats">
+      <div class="stat-item">
+        <span class="stat-num">₹42 LPA</span>
+        <span class="stat-label" data-en="Highest Package" data-hi="सर्वोच्च पैकेज">Highest Package</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">98%</span>
+        <span class="stat-label" data-en="Placement Rate" data-hi="प्लेसमेंट दर">Placement Rate</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">₹8.6 LPA</span>
+        <span class="stat-label" data-en="Average Package" data-hi="औसत पैकेज">Average Package</span>
+      </div>
+    </div>
+    <div class="popup-companies">
+      <span>Amazon</span><span>Google</span><span>Infosys</span><span>Wipro</span><span>TCS</span><span>Microsoft</span><span>HCL</span><span>IBM</span>
+    </div>
+    <a href="#placements" class="popup-btn" onclick="closePopup()" data-en="View All Placements →" data-hi="सभी प्लेसमेंट देखें →">View All Placements →</a>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="#"><i class="fas fa-phone"></i> +91-9866308271</a>
+    <a href="#"><i class="fas fa-envelope"></i> info@mish.co.in</a>
+  </div>
+  <div class="topbar-right">
+    <a href="/login"><i class="fas fa-user-graduate"></i> <span data-en="Student Portal" data-hi="छात्र पोर्टल">Student Portal</span></a>
+    <a href="/login"><i class="fas fa-user-tie"></i> <span data-en="Staff Login" data-hi="स्टाफ लॉगिन">Staff Login</span></a>
+    <a href="/login"><i class="fas fa-users"></i> <span data-en="Alumni" data-hi="पूर्व छात्र">Alumni</span></a>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="main-header" id="mainHeader">
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-emblem">
+        <div class="emblem-circle"><span>MISH</span></div>
+      </div>
+      <div class="logo-text">
+        <h1 data-en="MAA Institute of Speech and Hearing" data-hi="माँ इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग">MAA Institute of Speech and Hearing</h1>
+        <p data-en="Affiliated to Osmania University | RCI Approved | Est. 2019" data-hi="उस्मानिया विश्वविद्यालय से संबद्ध | RCI अनुमोदित | स्थापित 2019">Affiliated to Osmania University | RCI Approved | Est. 2019</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="zoom-controls">
+        <button onclick="zoomOut()" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+        <button onclick="resetZoom()" title="Reset"><i class="fas fa-undo"></i></button>
+        <button onclick="zoomIn()" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+      </div>
+      <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn">
+        <i class="fas fa-language"></i> <span id="langLabel">हिंदी</span>
+      </button>
+      <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <nav class="main-nav" id="mainNav">
+    <ul>
+      <li><a href="#home" data-en="Home" data-hi="होम">Home</a></li>
+      <li class="has-dropdown">
+        <a href="#about" data-en="About" data-hi="हमारे बारे में">About <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown">
+          <a href="#" data-en="Vision & Mission" data-hi="दृष्टि और मिशन">Vision &amp; Mission</a>
+          <a href="#" data-en="Leadership" data-hi="नेतृत्व">Leadership</a>
+          <a href="#" data-en="Infrastructure" data-hi="बुनियादी ढांचा">Infrastructure</a>
+          <a href="#" data-en="Accreditations" data-hi="मान्यताएं">Accreditations</a>
+        </div>
+      </li>
+      <li class="has-dropdown">
+        <a href="#departments" data-en="Academics" data-hi="शिक्षा">Academics <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown">
+          <a href="#" data-en="B.Tech Programs" data-hi="बी.टेक कार्यक्रम">B.Tech Programs</a>
+          <a href="#" data-en="M.Tech Programs" data-hi="एम.टेक कार्यक्रम">M.Tech Programs</a>
+          <a href="#" data-en="MBA" data-hi="एमबीए">MBA</a>
+          <a href="#" data-en="Ph.D Programs" data-hi="पीएचडी कार्यक्रम">Ph.D Programs</a>
+          <a href="#" data-en="Syllabus" data-hi="पाठ्यक्रम">Syllabus</a>
+        </div>
+      </li>
+      <li class="has-dropdown">
+        <a href="#departments" data-en="Departments" data-hi="विभाग">Departments <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown">
+          <a href="#">CSE / AI &amp; ML</a>
+          <a href="#">ECE</a>
+          <a href="#">Mechanical</a>
+          <a href="#">Civil</a>
+          <a href="#">EEE</a>
+          <a href="#">Data Science</a>
+          <a href="#">Cyber Security</a>
+        </div>
+      </li>
+      <li><a href="#faculty" data-en="Faculty" data-hi="संकाय">Faculty</a></li>
+      <li><a href="#research" data-en="Research" data-hi="अनुसंधान">Research</a></li>
+      <li><a href="#placements" data-en="Placements" data-hi="प्लेसमेंट">Placements</a></li>
+      <li><a href="#campus" data-en="Campus Life" data-hi="परिसर जीवन">Campus Life</a></li>
+      <li><a href="#admissions" data-en="Admissions" data-hi="प्रवेश">Admissions</a></li>
+      <li><a href="#contact" data-en="Contact" data-hi="संपर्क">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+
+<!-- ANNOUNCEMENT TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-label" data-en="ANNOUNCEMENTS" data-hi="घोषणाएं">ANNOUNCEMENTS</div>
+  <div class="ticker-content">
+    <div class="ticker-track">
+      <span data-en="🎓 Admissions Open 2025-26 — Apply Now for B.Tech, M.Tech & MBA programs" data-hi="🎓 प्रवेश खुले हैं 2025-26 — बी.टेक, एम.टेक और एमबीए के लिए अभी आवेदन करें">🎓 Admissions Open 2025-26 — Apply Now for B.Tech, M.Tech &amp; MBA programs</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="🏆 CODE SPRINT 4.0 National Hackathon — Register by April 15, 2025" data-hi="🏆 CODE SPRINT 4.0 राष्ट्रीय हैकाथॉन — 15 अप्रैल 2025 तक पंजीकरण करें">🏆 CODE SPRINT 4.0 National Hackathon — Register by April 15, 2025</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="💼 Campus Placement Drive: Amazon, Google, TCS visiting on May 5–7" data-hi="💼 कैंपस प्लेसमेंट ड्राइव: अमेज़न, गूगल, TCS 5-7 मई को आएंगे">💼 Campus Placement Drive: Amazon, Google, TCS visiting on May 5–7</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="📚 Last date for fee payment: April 30, 2025" data-hi="📚 शुल्क भुगतान की अंतिम तिथि: 30 अप्रैल 2025">📚 Last date for fee payment: April 30, 2025</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+      <span data-en="🔬 International Conference on AI & Robotics — Sept 19-20, 2025" data-hi="🔬 AI और रोबोटिक्स पर अंतर्राष्ट्रीय सम्मेलन — 19-20 सितंबर 2025">🔬 International Conference on AI &amp; Robotics — Sept 19-20, 2025</span>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+    </div>
+  </div>
+</div>
+
+<!-- HERO SECTION -->
+<section class="hero" id="home">
+  <div class="hero-slides">
+    <div class="hero-slide active" style="background-image: url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1600&q=80')">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge" data-en="NAAC A++ Accredited" data-hi="NAAC A++ मान्यता प्राप्त">NAAC A++ Accredited</div>
+        <h2 data-en="Shaping Tomorrow's Leaders Today" data-hi="कल के नेताओं को आज आकार देना">Shaping Tomorrow's<br>Leaders Today</h2>
+        <p data-en="World-class education, cutting-edge research, and 98% placement record — your future starts here." data-hi="विश्वस्तरीय शिक्षा, अत्याधुनिक अनुसंधान और 98% प्लेसमेंट रिकॉर्ड — आपका भविष्य यहाँ से शुरू होता है।">World-class education, cutting-edge research, and 98% placement record — your future starts here.</p>
+        <div class="hero-btns">
+          <a href="#admissions" class="btn-primary" data-en="Apply Now" data-hi="अभी आवेदन करें">Apply Now</a>
+          <a href="#about" class="btn-outline" data-en="Explore Campus" data-hi="परिसर देखें">Explore Campus</a>
+        </div>
+      </div>
+    </div>
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1562774053-701939374585?w=1600&q=80')">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge" data-en="Research Excellence" data-hi="अनुसंधान उत्कृष्टता">Research Excellence</div>
+        <h2 data-en="Innovate. Research. Lead." data-hi="नवाचार करें। अनुसंधान करें। नेतृत्व करें।">Innovate. Research. Lead.</h2>
+        <p data-en="State-of-the-art labs and research centers powering breakthrough discoveries." data-hi="अत्याधुनिक प्रयोगशालाएं और अनुसंधान केंद्र अभूतपूर्व खोजों को शक्ति देते हैं।">State-of-the-art labs and research centers powering breakthrough discoveries.</p>
+        <div class="hero-btns">
+          <a href="#research" class="btn-primary" data-en="Our Research" data-hi="हमारा अनुसंधान">Our Research</a>
+          <a href="#departments" class="btn-outline" data-en="Departments" data-hi="विभाग">Departments</a>
+        </div>
+      </div>
+    </div>
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1600&q=80')">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge" data-en="Record Placements 2025" data-hi="रिकॉर्ड प्लेसमेंट 2025">Record Placements 2025</div>
+        <h2 data-en="₹42 LPA Highest Package" data-hi="₹42 LPA सर्वोच्च पैकेज">₹42 LPA Highest Package</h2>
+        <p data-en="150+ recruiters. 98% placement. Your dream company awaits." data-hi="150+ भर्तीकर्ता। 98% प्लेसमेंट। आपकी सपनों की कंपनी आपका इंतजार कर रही है।">150+ recruiters. 98% placement. Your dream company awaits.</p>
+        <div class="hero-btns">
+          <a href="#placements" class="btn-primary" data-en="Placement Stats" data-hi="प्लेसमेंट आँकड़े">Placement Stats</a>
+          <a href="#contact" class="btn-outline" data-en="Contact Us" data-hi="संपर्क करें">Contact Us</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button class="slide-prev" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
+  <button class="slide-next" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
+  <div class="slide-dots">
+    <span class="dot active" onclick="goToSlide(0)"></span>
+    <span class="dot" onclick="goToSlide(1)"></span>
+    <span class="dot" onclick="goToSlide(2)"></span>
+  </div>
+</section>
+
+<!-- QUICK STATS -->
+<section class="quick-stats">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <i class="fas fa-user-graduate"></i>
+      <div class="count" data-target="12500">0</div>
+      <p data-en="Students Enrolled" data-hi="नामांकित छात्र">Students Enrolled</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-chalkboard-teacher"></i>
+      <div class="count" data-target="450">0</div>
+      <p data-en="Expert Faculty" data-hi="विशेषज्ञ शिक्षक">Expert Faculty</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-building"></i>
+      <div class="count" data-target="150">0</div>
+      <p data-en="Recruiters" data-hi="भर्तीकर्ता">Recruiters</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-flask"></i>
+      <div class="count" data-target="80">0</div>
+      <p data-en="Research Labs" data-hi="अनुसंधान प्रयोगशालाएं">Research Labs</p>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-award"></i>
+      <div class="count" data-target="40">0</div>
+      <p data-en="Years of Excellence" data-hi="उत्कृष्टता के वर्ष">Years of Excellence</p>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT + ANNOUNCEMENTS -->
+<section class="about-news" id="about">
+  <div class="container">
+    <div class="about-news-grid">
+      <div class="about-panel">
+        <div class="section-tag" data-en="About Us" data-hi="हमारे बारे में">About Us</div>
+        <h2 data-en="A Legacy of Academic Excellence" data-hi="शैक्षणिक उत्कृष्टता की विरासत">A Legacy of Academic Excellence</h2>
+        <p data-en="Established in 1985, NITS stands as one of India's premier engineering institutions, combining rigorous academics with industry-driven curriculum. Our 65-acre green campus houses 12 specialized departments and 80+ state-of-the-art laboratories." data-hi="1985 में स्थापित, NITS भारत के प्रमुख इंजीनियरिंग संस्थानों में से एक है, जो कठोर शिक्षा को उद्योग-संचालित पाठ्यक्रम के साथ जोड़ता है।">Established in 1985, NITS stands as one of India's premier engineering institutions, combining rigorous academics with industry-driven curriculum. Our 65-acre green campus houses 12 specialized departments and 80+ state-of-the-art laboratories.</p>
+        <div class="about-features">
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="NAAC A++ Accredited" data-hi="NAAC A++ मान्यता प्राप्त">NAAC A++ Accredited</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="NBA Approved Programs" data-hi="NBA अनुमोदित कार्यक्रम">NBA Approved Programs</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="QS World Ranking: Top 500" data-hi="QS विश्व रैंकिंग: शीर्ष 500">QS World Ranking: Top 500</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="NIRF Rank: 42" data-hi="NIRF रैंक: 42">NIRF Rank: 42</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="Autonomous Institute (UGC)" data-hi="स्वायत्त संस्थान (UGC)">Autonomous Institute (UGC)</span></div>
+          <div class="feat"><i class="fas fa-check-circle"></i><span data-en="MOU with 50+ Global Universities" data-hi="50+ वैश्विक विश्वविद्यालयों के साथ MOU">MOU with 50+ Global Universities</span></div>
+        </div>
+        <a href="#" class="btn-primary" data-en="Read More About Us" data-hi="हमारे बारे में और पढ़ें">Read More About Us</a>
+      </div>
+
+      <div class="news-panel">
+        <div class="news-tabs">
+          <button class="tab-btn active" onclick="switchTab('news', this)" data-en="News & Events" data-hi="समाचार और कार्यक्रम">News &amp; Events</button>
+          <button class="tab-btn" onclick="switchTab('notice', this)" data-en="Notices" data-hi="सूचनाएं">Notices</button>
+          <button class="tab-btn" onclick="switchTab('tender', this)" data-en="Tenders" data-hi="निविदाएं">Tenders</button>
+        </div>
+        <div class="tab-content active" id="tab-news">
+          <div class="news-item"><span class="news-date">Apr 01</span><div><a href="#" data-en="CODE SPRINT 4.0 National Hackathon registrations open" data-hi="CODE SPRINT 4.0 राष्ट्रीय हैकाथॉन पंजीकरण खुले">CODE SPRINT 4.0 National Hackathon registrations open</a><span class="news-tag new">New</span></div></div>
+          <div class="news-item"><span class="news-date">Mar 28</span><div><a href="#" data-en="Alumni Meet 2025 — Grand Celebration on Campus" data-hi="पूर्व छात्र मिलन 2025 — परिसर में भव्य उत्सव">Alumni Meet 2025 — Grand Celebration on Campus</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 22</span><div><a href="#" data-en="MISH wins National Communication Sciences Award 2025" data-hi="NITS ने राष्ट्रीय रोबोटिक्स चैंपियनशिप 2025 जीती">MISH wins National Communication Sciences Award 2025</a><span class="news-tag hot">Hot</span></div></div>
+          <div class="news-item"><span class="news-date">Mar 15</span><div><a href="#" data-en="International Conference on AI & Robotics — Sept 2025" data-hi="AI और रोबोटिक्स पर अंतर्राष्ट्रीय सम्मेलन — सितंबर 2025">International Conference on AI &amp; Robotics — Sept 2025</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 10</span><div><a href="#" data-en="Startup incubator launches 12 new ventures from MISH" data-hi="स्टार्टअप इनक्यूबेटर ने MISH से 12 नए उद्यम लॉन्च किए">Startup incubator launches 12 new ventures from MISH</a></div></div>
+        </div>
+        <div class="tab-content" id="tab-notice">
+          <div class="news-item"><span class="news-date">Apr 01</span><div><a href="#" data-en="Fee payment last date extended to April 30, 2025" data-hi="शुल्क भुगतान की अंतिम तिथि 30 अप्रैल 2025 तक बढ़ाई गई">Fee payment last date extended to April 30, 2025</a><span class="news-tag new">New</span></div></div>
+          <div class="news-item"><span class="news-date">Mar 25</span><div><a href="#" data-en="PhD Admissions 2025: Apply before April 20" data-hi="पीएचडी प्रवेश 2025: 20 अप्रैल से पहले आवेदन करें">PhD Admissions 2025: Apply before April 20</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 20</span><div><a href="#" data-en="Examination timetable for May 2025 published" data-hi="मई 2025 की परीक्षा समय-सारणी प्रकाशित">Examination timetable for May 2025 published</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 15</span><div><a href="#" data-en="Anti-ragging committee meeting — mandatory attendance" data-hi="रैगिंग विरोधी समिति की बैठक — अनिवार्य उपस्थिति">Anti-ragging committee meeting — mandatory attendance</a></div></div>
+        </div>
+        <div class="tab-content" id="tab-tender">
+          <div class="news-item"><span class="news-date">Apr 01</span><div><a href="#" data-en="Tender for Lab Equipment — Last date April 25" data-hi="लैब उपकरण के लिए निविदा — अंतिम तिथि 25 अप्रैल">Tender for Lab Equipment — Last date April 25</a><span class="news-tag new">New</span></div></div>
+          <div class="news-item"><span class="news-date">Mar 28</span><div><a href="#" data-en="Civil works tender for new hostel block" data-hi="नए छात्रावास ब्लॉक के लिए नागरिक कार्य निविदा">Civil works tender for new hostel block</a></div></div>
+          <div class="news-item"><span class="news-date">Mar 18</span><div><a href="#" data-en="Annual maintenance contract — Network infrastructure" data-hi="वार्षिक रखरखाव अनुबंध — नेटवर्क बुनियादी ढांचा">Annual maintenance contract — Network infrastructure</a></div></div>
+        </div>
+        <a href="#" class="view-all-link" data-en="View All Announcements →" data-hi="सभी घोषणाएं देखें →">View All Announcements →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPARTMENTS -->
+<section class="departments" id="departments">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Academics" data-hi="शिक्षा">Academics</div>
+      <h2 data-en="Our Departments" data-hi="हमारे विभाग">Our Departments</h2>
+      <p data-en="Explore 12 specialized departments offering world-class programs." data-hi="विश्वस्तरीय कार्यक्रम प्रदान करने वाले 12 विशेष विभाग।">Explore 12 specialized departments offering world-class programs.</p>
+    </div>
+    <div class="dept-grid">
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #667eea, #764ba2)"><i class="fas fa-laptop-code"></i></div>
+        <h3 data-en="Computer Science & Engineering" data-hi="कंप्यूटर विज्ञान और इंजीनियरिंग">Computer Science &amp; Engineering</h3>
+        <p data-en="AI, ML, Data Science, Cyber Security" data-hi="AI, ML, डेटा विज्ञान, साइबर सुरक्षा">AI, ML, Data Science, Cyber Security</p>
+        <div class="dept-meta"><span>480 Students</span><span>42 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c)"><i class="fas fa-microchip"></i></div>
+        <h3 data-en="Electronics & Communication" data-hi="इलेक्ट्रॉनिक्स और संचार">Electronics &amp; Communication</h3>
+        <p data-en="VLSI, Embedded Systems, IoT" data-hi="VLSI, एम्बेडेड सिस्टम, IoT">VLSI, Embedded Systems, IoT</p>
+        <div class="dept-meta"><span>360 Students</span><span>36 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe)"><i class="fas fa-bolt"></i></div>
+        <h3 data-en="Electrical & Electronics" data-hi="विद्युत और इलेक्ट्रॉनिक्स">Electrical &amp; Electronics</h3>
+        <p data-en="Power Systems, Control, Automation" data-hi="पावर सिस्टम, नियंत्रण, स्वचालन">Power Systems, Control, Automation</p>
+        <div class="dept-meta"><span>300 Students</span><span>28 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7)"><i class="fas fa-cogs"></i></div>
+        <h3 data-en="Mechanical Engineering" data-hi="यांत्रिक अभियांत्रिकी">Mechanical Engineering</h3>
+        <p data-en="Robotics, CAD/CAM, Thermal" data-hi="रोबोटिक्स, CAD/CAM, थर्मल">Robotics, CAD/CAM, Thermal</p>
+        <div class="dept-meta"><span>320 Students</span><span>30 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #fa709a, #fee140)"><i class="fas fa-building"></i></div>
+        <h3 data-en="Civil Engineering" data-hi="सिविल इंजीनियरिंग">Civil Engineering</h3>
+        <p data-en="Structural, Environmental, GIS" data-hi="संरचनात्मक, पर्यावरण, GIS">Structural, Environmental, GIS</p>
+        <div class="dept-meta"><span>280 Students</span><span>26 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #a18cd1, #fbc2eb)"><i class="fas fa-database"></i></div>
+        <h3 data-en="Data Science & Analytics" data-hi="डेटा विज्ञान और विश्लेषण">Data Science &amp; Analytics</h3>
+        <p data-en="Big Data, Deep Learning, BI Tools" data-hi="बिग डेटा, डीप लर्निंग, BI टूल्स">Big Data, Deep Learning, BI Tools</p>
+        <div class="dept-meta"><span>240 Students</span><span>22 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #30cfd0, #667eea)"><i class="fas fa-shield-alt"></i></div>
+        <h3 data-en="Cyber Security" data-hi="साइबर सुरक्षा">Cyber Security</h3>
+        <p data-en="Ethical Hacking, Forensics, Cloud Security" data-hi="एथिकल हैकिंग, फोरेंसिक, क्लाउड सुरक्षा">Ethical Hacking, Forensics, Cloud Security</p>
+        <div class="dept-meta"><span>200 Students</span><span>18 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background: linear-gradient(135deg, #f77062, #fe5196)"><i class="fas fa-chart-line"></i></div>
+        <h3>MBA</h3>
+        <p data-en="Finance, Marketing, HR, Operations" data-hi="वित्त, विपणन, मानव संसाधन, संचालन">Finance, Marketing, HR, Operations</p>
+        <div class="dept-meta"><span>180 Students</span><span>20 Faculty</span></div>
+        <a href="#" data-en="Explore →" data-hi="जानें →">Explore →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOP FACULTY SECTION -->
+<section class="faculty-section" id="faculty">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Expert Educators" data-hi="विशेषज्ञ शिक्षक">Expert Educators</div>
+      <h2 data-en="Top Faculty — Department Wise" data-hi="शीर्ष संकाय — विभागवार">Top Faculty — Department Wise</h2>
+      <p data-en="Learn from India's best professors and industry veterans across all disciplines." data-hi="सभी विषयों में भारत के सर्वश्रेष्ठ प्रोफेसरों और उद्योग विशेषज्ञों से सीखें।">Learn from India's best professors and industry veterans across all disciplines.</p>
+    </div>
+
+    <div class="faculty-tabs-wrap">
+      <div class="faculty-dept-tabs" role="tablist" aria-label="Faculty by department">
+        <button type="button" role="tab" class="faculty-tab-btn active" aria-selected="true" aria-controls="faculty-tab-cse" id="faculty-tabbtn-cse" onclick="switchFacultyTab('cse', this)"><i class="fas fa-laptop-code"></i><span data-en="CSE" data-hi="सीएसई">CSE</span></button>
+        <button type="button" role="tab" class="faculty-tab-btn" aria-selected="false" aria-controls="faculty-tab-ece" id="faculty-tabbtn-ece" onclick="switchFacultyTab('ece', this)"><i class="fas fa-microchip"></i><span data-en="ECE" data-hi="ईसीई">ECE</span></button>
+        <button type="button" role="tab" class="faculty-tab-btn" aria-selected="false" aria-controls="faculty-tab-mech" id="faculty-tabbtn-mech" onclick="switchFacultyTab('mech', this)"><i class="fas fa-cogs"></i><span data-en="Mechanical" data-hi="मैकेनिकल">Mechanical</span></button>
+        <button type="button" role="tab" class="faculty-tab-btn" aria-selected="false" aria-controls="faculty-tab-civil" id="faculty-tabbtn-civil" onclick="switchFacultyTab('civil', this)"><i class="fas fa-building"></i><span data-en="Civil" data-hi="सिविल">Civil</span></button>
+        <button type="button" role="tab" class="faculty-tab-btn" aria-selected="false" aria-controls="faculty-tab-eee" id="faculty-tabbtn-eee" onclick="switchFacultyTab('eee', this)"><i class="fas fa-bolt"></i><span data-en="EEE" data-hi="ईईई">EEE</span></button>
+        <button type="button" role="tab" class="faculty-tab-btn" aria-selected="false" aria-controls="faculty-tab-ds" id="faculty-tabbtn-ds" onclick="switchFacultyTab('ds', this)"><i class="fas fa-database"></i><span data-en="Data Sci." data-hi="डेटा विज्ञान">Data Sci.</span></button>
+        <button type="button" role="tab" class="faculty-tab-btn" aria-selected="false" aria-controls="faculty-tab-mba" id="faculty-tabbtn-mba" onclick="switchFacultyTab('mba', this)"><i class="fas fa-chart-line"></i><span data-en="MBA" data-hi="एमबीए">MBA</span></button>
+      </div>
+
+      <div class="faculty-tab-panels">
+    <div id="faculty-tab-cse" class="faculty-tab-panel active" role="tabpanel" aria-labelledby="faculty-tabbtn-cse">
+      <div class="faculty-cards">
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#667eea,#764ba2)">AK</div>
+          <div class="faculty-info">
+            <h4>Dr. Arjun Khanna</h4>
+            <span class="faculty-title" data-en="Head of Department & Professor" data-hi="विभागाध्यक्ष और प्रोफेसर">Head of Department &amp; Professor</span>
+            <span class="faculty-exp" data-en="22 yrs | Ph.D — IIT Bombay" data-hi="22 वर्ष | पीएचडी — IIT बॉम्बे">22 yrs | Ph.D — IIT Bombay</span>
+            <div class="faculty-tags"><span>Deep Learning</span><span>NLP</span><span>Computer Vision</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 68 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#667eea,#764ba2)">SM</div>
+          <div class="faculty-info">
+            <h4>Dr. Sunita Mehta</h4>
+            <span class="faculty-title" data-en="Associate Professor" data-hi="एसोसिएट प्रोफेसर">Associate Professor</span>
+            <span class="faculty-exp" data-en="16 yrs | Ph.D — IIT Delhi" data-hi="16 वर्ष | पीएचडी — IIT दिल्ली">16 yrs | Ph.D — IIT Delhi</span>
+            <div class="faculty-tags"><span>Distributed Systems</span><span>Cloud</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 44 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#667eea,#764ba2)">RP</div>
+          <div class="faculty-info">
+            <h4>Mr. Rohan Prasad</h4>
+            <span class="faculty-title" data-en="Assistant Professor" data-hi="सहायक प्रोफेसर">Assistant Professor</span>
+            <span class="faculty-exp" data-en="8 yrs | M.Tech — NIT Warangal" data-hi="8 वर्ष | M.Tech — NIT वारंगल">8 yrs | M.Tech — NIT Warangal</span>
+            <div class="faculty-tags"><span>Algorithms</span><span>Competitive Programming</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 18 Publications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="faculty-tab-ece" class="faculty-tab-panel" role="tabpanel" aria-labelledby="faculty-tabbtn-ece">
+      <div class="faculty-cards">
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#f093fb,#f5576c)">VR</div>
+          <div class="faculty-info">
+            <h4>Dr. Vijay Rao</h4>
+            <span class="faculty-title" data-en="Head of Department & Professor" data-hi="विभागाध्यक्ष और प्रोफेसर">Head of Department &amp; Professor</span>
+            <span class="faculty-exp" data-en="20 yrs | Ph.D — IISc Bangalore" data-hi="20 वर्ष | पीएचडी — IISc बेंगलुरु">20 yrs | Ph.D — IISc Bangalore</span>
+            <div class="faculty-tags"><span>VLSI Design</span><span>Embedded</span><span>FPGA</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 52 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#f093fb,#f5576c)">NK</div>
+          <div class="faculty-info">
+            <h4>Dr. Nisha Kapoor</h4>
+            <span class="faculty-title" data-en="Associate Professor" data-hi="एसोसिएट प्रोफेसर">Associate Professor</span>
+            <span class="faculty-exp" data-en="14 yrs | Ph.D — IIT Madras" data-hi="14 वर्ष | पीएचडी — IIT मद्रास">14 yrs | Ph.D — IIT Madras</span>
+            <div class="faculty-tags"><span>Wireless Comm.</span><span>5G/6G</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 36 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#f093fb,#f5576c)">PS</div>
+          <div class="faculty-info">
+            <h4>Mr. Pranav Sharma</h4>
+            <span class="faculty-title" data-en="Assistant Professor" data-hi="सहायक प्रोफेसर">Assistant Professor</span>
+            <span class="faculty-exp" data-en="7 yrs | M.Tech — IIT Kharagpur" data-hi="7 वर्ष | M.Tech — IIT खड़गपुर">7 yrs | M.Tech — IIT Kharagpur</span>
+            <div class="faculty-tags"><span>IoT</span><span>Signal Processing</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 14 Publications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="faculty-tab-mech" class="faculty-tab-panel" role="tabpanel" aria-labelledby="faculty-tabbtn-mech">
+      <div class="faculty-cards">
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#43e97b,#38f9d7); color:#1a4a1a">RG</div>
+          <div class="faculty-info">
+            <h4>Dr. Ramesh Gupta</h4>
+            <span class="faculty-title" data-en="Professor & Head of Department" data-hi="प्रोफेसर और विभागाध्यक्ष">Professor &amp; Head of Department</span>
+            <span class="faculty-exp" data-en="24 yrs | Ph.D — IIT Roorkee" data-hi="24 वर्ष | पीएचडी — IIT रुड़की">24 yrs | Ph.D — IIT Roorkee</span>
+            <div class="faculty-tags"><span>Robotics</span><span>CAD/CAM</span><span>FEM</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 59 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#43e97b,#38f9d7); color:#1a4a1a">LP</div>
+          <div class="faculty-info">
+            <h4>Dr. Leela Patel</h4>
+            <span class="faculty-title" data-en="Associate Professor" data-hi="एसोसिएट प्रोफेसर">Associate Professor</span>
+            <span class="faculty-exp" data-en="13 yrs | Ph.D — IIT Bombay" data-hi="13 वर्ष | पीएचडी — IIT बॉम्बे">13 yrs | Ph.D — IIT Bombay</span>
+            <div class="faculty-tags"><span>Thermal Engineering</span><span>CFD</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 28 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#43e97b,#38f9d7); color:#1a4a1a">KN</div>
+          <div class="faculty-info">
+            <h4>Mr. Kiran Nair</h4>
+            <span class="faculty-title" data-en="Assistant Professor" data-hi="सहायक प्रोफेसर">Assistant Professor</span>
+            <span class="faculty-exp" data-en="6 yrs | M.Tech — NIT Trichy" data-hi="6 वर्ष | M.Tech — NIT त्रिची">6 yrs | M.Tech — NIT Trichy</span>
+            <div class="faculty-tags"><span>Manufacturing</span><span>Industry 4.0</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 10 Publications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="faculty-tab-civil" class="faculty-tab-panel" role="tabpanel" aria-labelledby="faculty-tabbtn-civil">
+      <div class="faculty-cards">
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#fa709a,#fee140); color:#3a1a00">BJ</div>
+          <div class="faculty-info">
+            <h4>Dr. Bharat Joshi</h4>
+            <span class="faculty-title" data-en="Professor & Head of Department" data-hi="प्रोफेसर और विभागाध्यक्ष">Professor &amp; Head of Department</span>
+            <span class="faculty-exp" data-en="19 yrs | Ph.D — IIT Hyderabad" data-hi="19 वर्ष | पीएचडी — IIT हैदराबाद">19 yrs | Ph.D — IIT Hyderabad</span>
+            <div class="faculty-tags"><span>Structural Engineering</span><span>Seismic</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 41 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#fa709a,#fee140); color:#3a1a00">DT</div>
+          <div class="faculty-info">
+            <h4>Dr. Deepa Thomas</h4>
+            <span class="faculty-title" data-en="Associate Professor" data-hi="एसोसिएट प्रोफेसर">Associate Professor</span>
+            <span class="faculty-exp" data-en="11 yrs | Ph.D — IIT Madras" data-hi="11 वर्ष | पीएचडी — IIT मद्रास">11 yrs | Ph.D — IIT Madras</span>
+            <div class="faculty-tags"><span>Environmental Engg.</span><span>GIS</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 23 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#fa709a,#fee140); color:#3a1a00">MS</div>
+          <div class="faculty-info">
+            <h4>Mr. Manoj Singh</h4>
+            <span class="faculty-title" data-en="Assistant Professor" data-hi="सहायक प्रोफेसर">Assistant Professor</span>
+            <span class="faculty-exp" data-en="5 yrs | M.Tech — BITS Pilani" data-hi="5 वर्ष | M.Tech — BITS पिलानी">5 yrs | M.Tech — BITS Pilani</span>
+            <div class="faculty-tags"><span>Transportation</span><span>Smart Cities</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 8 Publications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="faculty-tab-eee" class="faculty-tab-panel" role="tabpanel" aria-labelledby="faculty-tabbtn-eee">
+      <div class="faculty-cards">
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#4facfe,#00f2fe); color:#003a50">SC</div>
+          <div class="faculty-info">
+            <h4>Dr. Suresh Chandra</h4>
+            <span class="faculty-title" data-en="Professor & Head of Department" data-hi="प्रोफेसर और विभागाध्यक्ष">Professor &amp; Head of Department</span>
+            <span class="faculty-exp" data-en="21 yrs | Ph.D — IIT Kanpur" data-hi="21 वर्ष | पीएचडी — IIT कानपुर">21 yrs | Ph.D — IIT Kanpur</span>
+            <div class="faculty-tags"><span>Power Systems</span><span>Smart Grid</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 47 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#4facfe,#00f2fe); color:#003a50">PV</div>
+          <div class="faculty-info">
+            <h4>Dr. Preethi Varma</h4>
+            <span class="faculty-title" data-en="Associate Professor" data-hi="एसोसिएट प्रोफेसर">Associate Professor</span>
+            <span class="faculty-exp" data-en="12 yrs | Ph.D — IIT Gandhinagar" data-hi="12 वर्ष | पीएचडी — IIT गांधीनगर">12 yrs | Ph.D — IIT Gandhinagar</span>
+            <div class="faculty-tags"><span>Renewable Energy</span><span>Drives</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 31 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#4facfe,#00f2fe); color:#003a50">AV</div>
+          <div class="faculty-info">
+            <h4>Mr. Arun Verma</h4>
+            <span class="faculty-title" data-en="Assistant Professor" data-hi="सहायक प्रोफेसर">Assistant Professor</span>
+            <span class="faculty-exp" data-en="7 yrs | M.Tech — NIT Calicut" data-hi="7 वर्ष | M.Tech — NIT कालीकट">7 yrs | M.Tech — NIT Calicut</span>
+            <div class="faculty-tags"><span>Control Systems</span><span>PLCs</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 12 Publications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="faculty-tab-ds" class="faculty-tab-panel" role="tabpanel" aria-labelledby="faculty-tabbtn-ds">
+      <div class="faculty-cards">
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#a18cd1,#fbc2eb); color:#3a1a50">TR</div>
+          <div class="faculty-info">
+            <h4>Dr. Tanya Reddy</h4>
+            <span class="faculty-title" data-en="Head of Department & Professor" data-hi="विभागाध्यक्ष और प्रोफेसर">Head of Department &amp; Professor</span>
+            <span class="faculty-exp" data-en="15 yrs | Ph.D — ISI Kolkata" data-hi="15 वर्ष | पीएचडी — ISI कोलकाता">15 yrs | Ph.D — ISI Kolkata</span>
+            <div class="faculty-tags"><span>Big Data</span><span>ML Ops</span><span>Analytics</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 38 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#a18cd1,#fbc2eb); color:#3a1a50">HM</div>
+          <div class="faculty-info">
+            <h4>Dr. Harsh Malhotra</h4>
+            <span class="faculty-title" data-en="Associate Professor" data-hi="एसोसिएट प्रोफेसर">Associate Professor</span>
+            <span class="faculty-exp" data-en="10 yrs | Ph.D — IIT Hyderabad" data-hi="10 वर्ष | पीएचडी — IIT हैदराबाद">10 yrs | Ph.D — IIT Hyderabad</span>
+            <div class="faculty-tags"><span>Deep Learning</span><span>Time Series</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 26 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#a18cd1,#fbc2eb); color:#3a1a50">SJ</div>
+          <div class="faculty-info">
+            <h4>Ms. Swathi Jain</h4>
+            <span class="faculty-title" data-en="Assistant Professor" data-hi="सहायक प्रोफेसर">Assistant Professor</span>
+            <span class="faculty-exp" data-en="5 yrs | M.Tech — IIT Delhi" data-hi="5 वर्ष | M.Tech — IIT दिल्ली">5 yrs | M.Tech — IIT Delhi</span>
+            <div class="faculty-tags"><span>Python / R</span><span>Tableau</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 9 Publications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="faculty-tab-mba" class="faculty-tab-panel" role="tabpanel" aria-labelledby="faculty-tabbtn-mba">
+      <div class="faculty-cards">
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#f77062,#fe5196)">CM</div>
+          <div class="faculty-info">
+            <h4>Dr. Chandra Mohan</h4>
+            <span class="faculty-title" data-en="Dean — Management Studies" data-hi="डीन — प्रबंधन अध्ययन">Dean — Management Studies</span>
+            <span class="faculty-exp" data-en="25 yrs | Ph.D — IIM Ahmedabad" data-hi="25 वर्ष | पीएचडी — IIM अहमदाबाद">25 yrs | Ph.D — IIM Ahmedabad</span>
+            <div class="faculty-tags"><span>Strategic Mgmt.</span><span>Entrepreneurship</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 55 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#f77062,#fe5196)">AB</div>
+          <div class="faculty-info">
+            <h4>Dr. Asha Bose</h4>
+            <span class="faculty-title" data-en="Associate Professor" data-hi="एसोसिएट प्रोफेसर">Associate Professor</span>
+            <span class="faculty-exp" data-en="17 yrs | Ph.D — IIM Bangalore" data-hi="17 वर्ष | पीएचडी — IIM बेंगलुरु">17 yrs | Ph.D — IIM Bangalore</span>
+            <div class="faculty-tags"><span>Finance</span><span>Investment Banking</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 33 Publications</div>
+          </div>
+        </div>
+        <div class="faculty-card">
+          <div class="faculty-avatar" style="background: linear-gradient(135deg,#f77062,#fe5196)">VT</div>
+          <div class="faculty-info">
+            <h4>Mr. Vivek Tiwari</h4>
+            <span class="faculty-title" data-en="Assistant Professor" data-hi="सहायक प्रोफेसर">Assistant Professor</span>
+            <span class="faculty-exp" data-en="9 yrs | MBA — IIM Lucknow" data-hi="9 वर्ष | MBA — IIM लखनऊ">9 yrs | MBA — IIM Lucknow</span>
+            <div class="faculty-tags"><span>Marketing</span><span>Digital Strategy</span></div>
+            <div class="faculty-pub"><i class="fas fa-book-open"></i> 15 Publications</div>
+          </div>
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:40px;">
+      <a href="#" class="btn-primary" data-en="View All Faculty →" data-hi="सभी संकाय देखें →">View All Faculty →</a>
+    </div>
+  </div>
+</section>
+
+<!-- PLACEMENTS -->
+<section class="placements" id="placements">
+  <div class="container">
+    <div class="section-header light">
+      <div class="section-tag" data-en="Career Success" data-hi="करियर सफलता">Career Success</div>
+      <h2 data-en="Placement Excellence" data-hi="प्लेसमेंट उत्कृष्टता">Placement Excellence</h2>
+      <p data-en="Our students are placed at the world's best companies." data-hi="हमारे छात्र दुनिया की सबसे अच्छी कंपनियों में नियुक्त हैं।">Our students are placed at the world's best companies.</p>
+    </div>
+    <div class="placement-stats-row">
+      <div class="place-stat"><span class="place-num">₹42 LPA</span><span data-en="Highest CTC" data-hi="सर्वोच्च CTC">Highest CTC</span></div>
+      <div class="place-stat"><span class="place-num">₹8.6 LPA</span><span data-en="Average CTC" data-hi="औसत CTC">Average CTC</span></div>
+      <div class="place-stat"><span class="place-num">98%</span><span data-en="Placement Rate" data-hi="प्लेसमेंट दर">Placement Rate</span></div>
+      <div class="place-stat"><span class="place-num">150+</span><span data-en="Recruiters" data-hi="भर्तीकर्ता">Recruiters</span></div>
+      <div class="place-stat"><span class="place-num">2800+</span><span data-en="Offers in 2024" data-hi="2024 में ऑफर">Offers in 2024</span></div>
+    </div>
+    <div class="company-logos">
+      <div class="logo-track">
+        <div class="company-logo">Amazon</div><div class="company-logo">Google</div><div class="company-logo">Microsoft</div>
+        <div class="company-logo">Infosys</div><div class="company-logo">Wipro</div><div class="company-logo">TCS</div>
+        <div class="company-logo">HCL</div><div class="company-logo">IBM</div><div class="company-logo">Cognizant</div>
+        <div class="company-logo">Accenture</div><div class="company-logo">Deloitte</div><div class="company-logo">Oracle</div>
+        <div class="company-logo">Adobe</div><div class="company-logo">Capgemini</div>
+        <div class="company-logo">Amazon</div><div class="company-logo">Google</div><div class="company-logo">Microsoft</div>
+        <div class="company-logo">Infosys</div>
+      </div>
+    </div>
+    <div class="toppers-grid">
+      <h3 class="toppers-title" data-en="Star Performers 2024" data-hi="स्टार प्रदर्शक 2024">Star Performers 2024</h3>
+      <div class="topper-cards">
+        <div class="topper-card"><div class="topper-avatar">RS</div><div class="topper-info"><strong>Rahul Sharma</strong><span>CSE 2024</span><span class="topper-company">Google</span><span class="topper-pkg">₹42 LPA</span></div></div>
+        <div class="topper-card"><div class="topper-avatar">PK</div><div class="topper-info"><strong>Priya Krishnan</strong><span>AI/ML 2024</span><span class="topper-company">Microsoft</span><span class="topper-pkg">₹38 LPA</span></div></div>
+        <div class="topper-card"><div class="topper-avatar">AJ</div><div class="topper-info"><strong>Arjun Joshi</strong><span>ECE 2024</span><span class="topper-company">Amazon</span><span class="topper-pkg">₹35 LPA</span></div></div>
+        <div class="topper-card"><div class="topper-avatar">SM</div><div class="topper-info"><strong>Sneha Menon</strong><span>Data Science 2024</span><span class="topper-company">Adobe</span><span class="topper-pkg">₹32 LPA</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESEARCH -->
+<section class="research-section" id="research">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Innovation" data-hi="नवाचार">Innovation</div>
+      <h2 data-en="Research & Innovation" data-hi="अनुसंधान और नवाचार">Research &amp; Innovation</h2>
+    </div>
+    <div class="research-grid">
+      <div class="research-card"><div class="research-icon"><i class="fas fa-robot"></i></div><h3 data-en="AI & Robotics Lab" data-hi="AI और रोबोटिक्स लैब">AI &amp; Robotics Lab</h3><p data-en="Pioneer research in autonomous systems, deep learning, and humanoid robotics with ₹12 Cr funding." data-hi="₹12 करोड़ की फंडिंग के साथ स्वायत्त प्रणालियों, डीप लर्निंग और ह्यूमनॉइड रोबोटिक्स में अग्रणी अनुसंधान।">Pioneer research in autonomous systems, deep learning, and humanoid robotics with ₹12 Cr funding.</p><div class="research-tags"><span>50+ Publications</span><span>₹12 Cr Funding</span></div></div>
+      <div class="research-card"><div class="research-icon"><i class="fas fa-dna"></i></div><h3 data-en="Biomedical Engineering" data-hi="बायोमेडिकल इंजीनियरिंग">Biomedical Engineering</h3><p data-en="Cutting-edge research in medical imaging, wearable biosensors, and healthcare AI systems." data-hi="चिकित्सा इमेजिंग, पहनने योग्य बायोसेंसर और स्वास्थ्य सेवा AI प्रणालियों में अत्याधुनिक अनुसंधान।">Cutting-edge research in medical imaging, wearable biosensors, and healthcare AI systems.</p><div class="research-tags"><span>35+ Publications</span><span>₹8 Cr Funding</span></div></div>
+      <div class="research-card"><div class="research-icon"><i class="fas fa-solar-panel"></i></div><h3 data-en="Green Energy Research" data-hi="हरित ऊर्जा अनुसंधान">Green Energy Research</h3><p data-en="Sustainable energy solutions including solar, wind integration, and smart grid technologies." data-hi="सौर, पवन एकीकरण और स्मार्ट ग्रिड प्रौद्योगिकियों सहित टिकाऊ ऊर्जा समाधान।">Sustainable energy solutions including solar, wind integration, and smart grid technologies.</p><div class="research-tags"><span>28+ Publications</span><span>₹6 Cr Funding</span></div></div>
+      <div class="research-card"><div class="research-icon"><i class="fas fa-shield-virus"></i></div><h3 data-en="Cybersecurity Center" data-hi="साइबर सुरक्षा केंद्र">Cybersecurity Center</h3><p data-en="National Centre of Excellence for Cybersecurity — recognized by Ministry of Electronics & IT." data-hi="साइबर सुरक्षा के लिए राष्ट्रीय उत्कृष्टता केंद्र — इलेक्ट्रॉनिक्स और आईटी मंत्रालय द्वारा मान्यता प्राप्त।">National Centre of Excellence for Cybersecurity — recognized by Ministry of Electronics &amp; IT.</p><div class="research-tags"><span>45+ Publications</span><span>₹15 Cr Funding</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CAMPUS LIFE -->
+<section class="campus-life" id="campus">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Life at MISH" data-hi="MISH में जीवन">Life at MISH</div>
+      <h2 data-en="Campus Life & Facilities" data-hi="परिसर जीवन और सुविधाएं">Campus Life &amp; Facilities</h2>
+    </div>
+    <div class="campus-grid">
+      <div class="campus-card large" style="background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80')">
+        <div class="campus-card-overlay"><h3 data-en="Modern Library" data-hi="आधुनिक पुस्तकालय">Modern Library</h3><p data-en="2 lakh+ books, e-journals, 24/7 access" data-hi="2 लाख+ पुस्तकें, ई-जर्नल, 24/7 पहुंच">2 lakh+ books, e-journals, 24/7 access</p></div>
+      </div>
+      <div class="campus-card" style="background-image: url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80')">
+        <div class="campus-card-overlay"><h3 data-en="Sports Complex" data-hi="खेल परिसर">Sports Complex</h3><p data-en="Olympic-standard facilities" data-hi="ओलंपिक-मानक सुविधाएं">Olympic-standard facilities</p></div>
+      </div>
+      <div class="campus-card" style="background-image: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80')">
+        <div class="campus-card-overlay"><h3 data-en="Food Court" data-hi="फूड कोर्ट">Food Court</h3><p data-en="Multi-cuisine dining, 24/7 cafe" data-hi="बहु-व्यंजन भोजन, 24/7 कैफे">Multi-cuisine dining, 24/7 cafe</p></div>
+      </div>
+      <div class="campus-card" style="background-image: url('https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80')">
+        <div class="campus-card-overlay"><h3 data-en="Boys & Girls Hostels" data-hi="छात्र और छात्रा छात्रावास">Boys &amp; Girls Hostels</h3><p data-en="AC rooms, Wi-Fi, 24/7 security" data-hi="AC कमरे, Wi-Fi, 24/7 सुरक्षा">AC rooms, Wi-Fi, 24/7 security</p></div>
+      </div>
+      <div class="campus-card" style="background-image: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80')">
+        <div class="campus-card-overlay"><h3 data-en="Research Labs" data-hi="अनुसंधान प्रयोगशालाएं">Research Labs</h3><p data-en="80+ advanced labs, incubation center" data-hi="80+ उन्नत लैब, इनक्यूबेशन सेंटर">80+ advanced labs, incubation center</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ADMISSIONS -->
+<section class="admissions" id="admissions">
+  <div class="container">
+    <div class="admissions-inner">
+      <div class="admissions-text">
+        <div class="section-tag" data-en="Join Us" data-hi="हमसे जुड़ें">Join Us</div>
+        <h2 data-en="Admissions Open 2025–26" data-hi="प्रवेश खुले हैं 2025–26">Admissions Open 2025–26</h2>
+        <p data-en="Take the first step towards an extraordinary career. Applications are open for B.Tech, M.Tech, MBA, and Ph.D programs." data-hi="एक असाधारण करियर की ओर पहला कदम उठाएं। बी.टेक, एम.टेक, एमबीए और पीएचडी कार्यक्रमों के लिए आवेदन खुले हैं।">Take the first step towards an extraordinary career. Applications are open for B.Tech, M.Tech, MBA, and Ph.D programs.</p>
+        <div class="admission-steps">
+          <div class="step"><span>01</span><p data-en="Register Online" data-hi="ऑनलाइन पंजीकरण करें">Register Online</p></div>
+          <div class="step"><span>02</span><p data-en="Submit Documents" data-hi="दस्तावेज़ जमा करें">Submit Documents</p></div>
+          <div class="step"><span>03</span><p data-en="Counselling" data-hi="काउंसलिंग">Counselling</p></div>
+          <div class="step"><span>04</span><p data-en="Enroll" data-hi="नामांकन करें">Enroll</p></div>
+        </div>
+        <div class="counselling-codes">
+          <h4 data-en="Counselling Codes" data-hi="काउंसलिंग कोड">Counselling Codes</h4>
+          <div class="codes-row">
+            <span>EAPCET: <strong>MISH01</strong></span>
+            <span>M.Tech: <strong>MISH02</strong></span>
+            <span>MBA: <strong>MISH03</strong></span>
+            <span>ECET: <strong>MISH04</strong></span>
+          </div>
+        </div>
+        <a href="#" class="btn-primary" data-en="Apply Now" data-hi="अभी आवेदन करें">Apply Now</a>
+      </div>
+      <div class="admissions-card-col">
+        <div class="contact-card">
+          <h3 data-en="Quick Enquiry" data-hi="त्वरित पूछताछ">Quick Enquiry</h3>
+          <form onsubmit="return false;">
+            <input type="text" placeholder="Your Name" data-en-placeholder="Your Name" data-hi-placeholder="आपका नाम">
+            <input type="email" placeholder="Email Address" data-en-placeholder="Email Address" data-hi-placeholder="ईमेल पता">
+            <input type="tel" placeholder="Phone Number" data-en-placeholder="Phone Number" data-hi-placeholder="फोन नंबर">
+            <select>
+              <option>Select Program</option>
+              <option>B.Tech</option><option>M.Tech</option><option>MBA</option><option>Ph.D</option>
+            </select>
+            <button type="submit" class="btn-primary" data-en="Send Enquiry" data-hi="पूछताछ भेजें">Send Enquiry</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact-section" id="contact">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag" data-en="Get In Touch" data-hi="संपर्क करें">Get In Touch</div>
+      <h2 data-en="Contact Us" data-hi="हमसे संपर्क करें">Contact Us</h2>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-info-card"><i class="fas fa-map-marker-alt"></i><h4 data-en="Address" data-hi="पता">Address</h4><p data-en="MISH Campus, Road No. 14, Banjara Hills, Hyderabad – 500034" data-hi="MISH परिसर, रोड नं. 14, बंजारा हिल्स, हैदराबाद – 500034">MISH Campus, Road No. 14, Banjara Hills, Hyderabad – 500034</p></div>
+      <div class="contact-info-card"><i class="fas fa-phone"></i><h4 data-en="Phone" data-hi="फोन">Phone</h4><p>+91-9866308271<br>+91-040-23456789</p></div>
+      <div class="contact-info-card"><i class="fas fa-envelope"></i><h4 data-en="Email" data-hi="ईमेल">Email</h4><p>info@mish.co.in<br>admissions@mish.co.in</p></div>
+      <div class="contact-info-card"><i class="fas fa-clock"></i><h4 data-en="Office Hours" data-hi="कार्यालय समय">Office Hours</h4><p data-en="Mon – Sat: 9:00 AM – 5:00 PM" data-hi="सोम – शनि: सुबह 9 – शाम 5">Mon – Sat: 9:00 AM – 5:00 PM</p></div>
+    </div>
+    <div class="map-placeholder">
+      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3890.123456789!2d77.5!3d12.9!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTLCsDU0JzAwLjAiTiA3N8KwMzAnMDAuMCJF!5e0!3m2!1sen!2sin!4v1234567890" width="100%" height="320" style="border:0;border-radius:16px;" allowfullscreen="" loading="lazy"></iframe>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="main-footer">
+  <div class="footer-top">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col brand-col">
+          <div class="footer-logo">
+            <div class="emblem-circle small">MISH</div>
+            <div>
+              <strong data-en="MAA Institute of Speech and Hearing" data-hi="माँ इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग">MAA Institute of Speech and Hearing</strong>
+              <p data-en="Learn. Heal. Inspire." data-hi="सीखो। ठीक करो। प्रेरित करो।">Learn. Heal. Inspire.</p>
+            </div>
+          </div>
+          <p class="footer-desc" data-en="NITS is committed to delivering excellence in education, research, and innovation. Join 12,500+ students building the future." data-hi="NITS शिक्षा, अनुसंधान और नवाचार में उत्कृष्टता प्रदान करने के लिए प्रतिबद्ध है।">NITS is committed to delivering excellence in education, research, and innovation. Join 12,500+ students building the future.</p>
+          <div class="social-links">
+            <a href="#"><i class="fab fa-facebook-f"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#"><i class="fab fa-youtube"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Quick Links" data-hi="त्वरित लिंक">Quick Links</h4>
+          <ul>
+            <li><a href="#about" data-en="About MISH" data-hi="MISH के बारे में">About MISH</a></li>
+            <li><a href="#departments" data-en="Departments" data-hi="विभाग">Departments</a></li>
+            <li><a href="#faculty" data-en="Faculty" data-hi="संकाय">Faculty</a></li>
+            <li><a href="#placements" data-en="Placements" data-hi="प्लेसमेंट">Placements</a></li>
+            <li><a href="#research" data-en="Research" data-hi="अनुसंधान">Research</a></li>
+            <li><a href="#contact" data-en="Contact" data-hi="संपर्क">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Academics" data-hi="शिक्षा">Academics</h4>
+          <ul>
+            <li><a href="#">B.Tech Programs</a></li>
+            <li><a href="#">M.Tech Programs</a></li>
+            <li><a href="#">MBA</a></li>
+            <li><a href="#">Ph.D Programs</a></li>
+            <li><a href="#" data-en="Examination Cell" data-hi="परीक्षा सेल">Examination Cell</a></li>
+            <li><a href="#" data-en="Academic Calendar" data-hi="शैक्षणिक कैलेंडर">Academic Calendar</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4 data-en="Online Services" data-hi="ऑनलाइन सेवाएं">Online Services</h4>
+          <ul>
+            <li><a href="/login" data-en="Student Portal" data-hi="छात्र पोर्टल">Student Portal</a></li>
+            <li><a href="#" data-en="Fee Payment" data-hi="शुल्क भुगतान">Fee Payment</a></li>
+            <li><a href="#" data-en="Library Portal" data-hi="पुस्तकालय पोर्टल">Library Portal</a></li>
+            <li><a href="#" data-en="Placement Portal" data-hi="प्लेसमेंट पोर्टल">Placement Portal</a></li>
+            <li><a href="#" data-en="Grievance Redressal" data-hi="शिकायत निवारण">Grievance Redressal</a></li>
+            <li><a href="#" data-en="RTI" data-hi="RTI">RTI</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container">
+      <div class="footer-bottom-row footer-bottom-main">
+        <p data-en="© 2025 National Institute of Technology & Sciences. All Rights Reserved." data-hi="© 2025 माँ इंस्टीट्यूट ऑफ स्पीच एंड हियरिंग (MISH)। सर्वाधिकार सुरक्षित।">© 2025 MAA Institute of Speech and Hearing (MISH). All Rights Reserved.</p>
+        <div class="footer-links">
+          <a href="#" data-en="Privacy Policy" data-hi="गोपनीयता नीति">Privacy Policy</a>
+          <a href="#" data-en="Terms of Use" data-hi="उपयोग की शर्तें">Terms of Use</a>
+          <a href="#" data-en="Sitemap" data-hi="साइटमैप">Sitemap</a>
+          <a href="#" data-en="Accessibility" data-hi="अभिगम्यता">Accessibility</a>
+        </div>
+      </div>
+      <div class="footer-bottom-row footer-visitors-row">
+        <div class="footer-visitors" aria-live="polite">
+          <i class="fas fa-eye" aria-hidden="true"></i>
+          <span class="footer-visitors-label" data-en="Site Visitors" data-hi="साइट आगंतुक">Site Visitors</span>
+          <span class="footer-visitors-count" id="visitorsCount">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<button class="back-to-top" id="backToTop" onclick="scrollToTop()"><i class="fas fa-arrow-up"></i></button>
+<script src="script.js"></script>
+</body>
+</html>

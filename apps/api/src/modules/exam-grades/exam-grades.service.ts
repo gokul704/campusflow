@@ -2,13 +2,22 @@ import { prisma } from "@campusflow/db";
 
 export async function listExamGrades(
   tenantId: string,
-  filters: { batchCourseId?: string; studentId?: string }
+  filters: { batchCourseId?: string; studentId?: string; facultyUserId?: string }
 ) {
   return prisma.examGrade.findMany({
     where: {
       tenantId,
       ...(filters.batchCourseId ? { batchCourseId: filters.batchCourseId } : {}),
       ...(filters.studentId ? { studentId: filters.studentId } : {}),
+      ...(filters.facultyUserId
+        ? {
+            batchCourse: {
+              faculty: {
+                userId: filters.facultyUserId,
+              },
+            },
+          }
+        : {}),
     },
     include: {
       student: {

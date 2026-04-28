@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import { Role, prisma } from "@campusflow/db";
 import * as svc from "./batch-courses.service";
 
 const createSchema = z.object({
   batchId: z.string(),
-  sectionId: z.string(),
+  sectionId: z.string().optional().nullable(),
   courseId: z.string(),
   semester: z.number().int().min(1).max(10),
   facultyId: z.string().optional(),
@@ -43,12 +44,32 @@ export async function bulkCreateHandler(req: Request, res: Response): Promise<vo
   }
 }
 
+const TEACHING_FACULTY_ROLES: Role[] = [
+  Role.ASSISTANT_PROFESSOR,
+  Role.PROFESSOR,
+  Role.CLINICAL_STAFF,
+  Role.GUEST_PROFESSOR,
+];
+
 export async function listHandler(req: Request, res: Response): Promise<void> {
   try {
     const batchId = req.query.batchId as string | undefined;
-    const sectionId = req.query.sectionId as string | undefined;
     const semester = req.query.semester ? Number(req.query.semester) : undefined;
-    res.json(await svc.listBatchCourses(req.tenant.id, { batchId, sectionId, semester }));
+    let facultyId: string | undefined;
+
+    if (req.user?.id && TEACHING_FACULTY_ROLES.includes(req.user.role as Role)) {
+      const faculty = await prisma.faculty.findFirst({
+        where: { userId: req.user.id, tenantId: req.tenant.id },
+        select: { id: true },
+      });
+      if (!faculty) {
+        res.json([]);
+        return;
+      }
+      facultyId = faculty.id;
+    }
+
+    res.json(await svc.listBatchCourses(req.tenant.id, { batchId, semester, facultyId }));
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
   }

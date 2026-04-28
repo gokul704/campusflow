@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { authFetch } from "@/lib/api";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import {
@@ -25,6 +25,19 @@ interface RecentAssignment {
   batchCourse: { course: { name: string }; batch: { name: string }; section: { name: string } };
 }
 interface RecentEvent { id: string; title: string; startDate: string; eventType: string; }
+interface TimetableSlot {
+  id: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  room?: string | null;
+  batchCourse?: {
+    batch?: { name: string };
+    section?: { name: string };
+    course?: { name: string; code?: string };
+    faculty?: { user?: { firstName?: string; lastName?: string } };
+  };
+}
 interface Charts {
   weeklyAttendance: WeeklyAtt[];
   batchDistribution: BatchDist[];
@@ -134,55 +147,194 @@ function AttTip({
 function NoticeBoard({ recentEvents, recentAssignments, loading }: {
   recentEvents: RecentEvent[]; recentAssignments: RecentAssignment[]; loading: boolean;
 }) {
-  const items = [
-    ...recentEvents.map(e => ({
-      id: e.id, title: e.title, date: e.startDate,
-      tag: (e.eventType ?? "EVENT").replace(/_/g, " "),
-      tagCls: (EV_COLOR[e.eventType ?? "EVENT"] ?? EV_COLOR.EVENT!).tag,
-      icon: EV_ICON[e.eventType ?? "EVENT"] ?? "📌", sub: "",
-    })),
-    ...recentAssignments.map(a => ({
-      id: a.id, title: a.title, date: a.dueDate ?? a.createdAt,
-      tag: "ASSIGNMENT", tagCls: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300", icon: "📋",
-      sub: `${a.batchCourse.course.name} · ${a.batchCourse.batch.name} Sec ${a.batchCourse.section.name}`,
-    })),
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+  const [tab, setTab] = useState<"events" | "calendars">("events");
+
+  const eventRows = recentEvents
+    .filter((e) => !["EXAM", "ASSIGNMENT_DUE"].includes(e.eventType ?? "EVENT"))
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.startDate,
+      type: (e.eventType ?? "EVENT").replace(/_/g, " "),
+      details: "Seminar / workshop / event",
+    }));
+
+  const calendarFromEvents = recentEvents
+    .filter((e) => ["EXAM", "ASSIGNMENT_DUE"].includes(e.eventType ?? "EVENT") || /lab|schedule/i.test(e.title))
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.startDate,
+      type: (e.eventType ?? "EVENT").replace(/_/g, " "),
+      details: "Academic calendar item",
+    }));
+
+  const calendarFromAssignments = recentAssignments.map((a) => ({
+    id: a.id,
+    title: a.title,
+    date: a.dueDate ?? a.createdAt,
+    type: "ASSIGNMENT",
+    details: `${a.batchCourse.course.name} · ${a.batchCourse.batch.name} Sec ${a.batchCourse.section.name}`,
+  }));
+
+  const rows = (tab === "events" ? eventRows : [...calendarFromEvents, ...calendarFromAssignments])
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div className="flex min-h-[320px] flex-col rounded-xl bg-white shadow-sm dark:bg-gray-900">
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-100 px-4 py-2.5 dark:border-gray-800">
-        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200">Notice Board</h3>
-        <a href="/dashboard/events" className="text-[11px] font-medium text-blue-600 hover:underline">View all →</a>
+      <div className="flex flex-shrink-0 items-center border-b border-gray-100 px-4 py-2.5 dark:border-gray-800">
+        <div className="flex items-center rounded-lg border border-gray-200 p-0.5 text-[10px] dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => setTab("events")}
+            className={`rounded px-2 py-1 font-semibold transition ${
+              tab === "events"
+                ? "bg-blue-600 text-white"
+                : "text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            }`}
+          >
+            Events
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("calendars")}
+            className={`rounded px-2 py-1 font-semibold transition ${
+              tab === "calendars"
+                ? "bg-blue-600 text-white"
+                : "text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            }`}
+          >
+            Calendars
+          </button>
+        </div>
       </div>
-      <div className="max-h-[340px] min-h-[200px] flex-1 divide-y divide-gray-50 overflow-y-auto dark:divide-gray-800">
-        {loading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="px-4 py-2.5 flex gap-3 items-center">
-                <Pulse cls="w-8 h-8 rounded-lg flex-shrink-0" />
-                <div className="flex-1 space-y-1.5"><Pulse cls="h-2.5 w-3/4" /><Pulse cls="h-2 w-1/2" /></div>
+
+      <div className="px-4 py-2">
+        <div className="grid grid-cols-12 border-b border-gray-100 pb-2 text-[10px] font-semibold uppercase text-gray-400 dark:border-gray-800">
+          <span className="col-span-2">Date</span>
+          <span className="col-span-5">Title</span>
+          <span className="col-span-2">Type</span>
+          <span className="col-span-3">Details</span>
+        </div>
+      </div>
+      <div className="max-h-[280px] min-h-[180px] flex-1 overflow-y-auto px-4 pb-3">
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-12 gap-2 border-b border-gray-50 py-2 dark:border-gray-800">
+              <Pulse cls="col-span-2 h-2.5" />
+              <Pulse cls="col-span-5 h-2.5" />
+              <Pulse cls="col-span-2 h-2.5" />
+              <Pulse cls="col-span-3 h-2.5" />
+            </div>
+          ))
+        ) : rows.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-xs text-gray-400">No items found</div>
+        ) : (
+          rows.map((r) => (
+            <div
+              key={r.id}
+              className="grid grid-cols-12 gap-2 border-b border-gray-50 py-2 text-xs text-gray-600 transition-colors hover:bg-gray-50/60 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-800/40"
+            >
+              <span className="col-span-2">{sd(r.date)}</span>
+              <span className="col-span-5 truncate font-medium text-gray-800 dark:text-gray-100">{r.title}</span>
+              <span className="col-span-2">{r.type}</span>
+              <span className="col-span-3 truncate text-[11px] text-gray-500 dark:text-gray-400">{r.details}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LeadershipTimetableCard({
+  slots,
+  loading,
+  dayLabel,
+}: {
+  slots: TimetableSlot[];
+  loading: boolean;
+  dayLabel: string;
+}) {
+  const groupedSlots = slots.reduce<
+    Array<{
+      key: string;
+      startTime: string;
+      endTime: string;
+      courseName: string;
+      facultyName: string;
+      room?: string | null;
+      batches: string[];
+    }>
+  >((acc, s) => {
+    const facultyName = s.batchCourse?.faculty?.user
+      ? `${s.batchCourse.faculty.user.firstName ?? ""} ${s.batchCourse.faculty.user.lastName ?? ""}`.trim()
+      : "Unassigned";
+    const courseName = s.batchCourse?.course?.name ?? "Unnamed course";
+    const room = s.room ?? null;
+    const batchName = s.batchCourse?.batch?.name ?? "Batch";
+    const key = [s.startTime, s.endTime, courseName, facultyName, room ?? ""].join("|");
+    const found = acc.find((x) => x.key === key);
+    if (found) {
+      if (!found.batches.includes(batchName)) found.batches.push(batchName);
+      return acc;
+    }
+    acc.push({
+      key,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      courseName,
+      facultyName,
+      room,
+      batches: [batchName],
+    });
+    return acc;
+  }, []);
+
+  return (
+    <div className="flex min-h-[320px] flex-col rounded-xl bg-white p-4 shadow-sm dark:bg-gray-900">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-200">Leadership Timetable Tracker</h3>
+        <span className="text-[10px] text-blue-600">{dayLabel}</span>
+      </div>
+      <p className="mb-3 text-[11px] text-gray-500 dark:text-gray-400">
+        Track today&apos;s class slots, assigned faculty, and room details.
+      </p>
+      <div className="flex-1 space-y-2 overflow-y-auto">
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-gray-100 p-2 dark:border-gray-800">
+              <Pulse cls="h-2.5 w-32" />
+              <Pulse cls="mt-2 h-2 w-24" />
+            </div>
+          ))
+        ) : slots.length === 0 ? (
+          <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-gray-200 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
+            No timetable slots for today
+          </div>
+        ) : (
+          groupedSlots.slice(0, 6).map((s) => {
+            return (
+              <div key={s.key} className="rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
+                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                  {s.startTime} - {s.endTime} · {s.courseName}
+                </p>
+                <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  {s.batches.join(", ")} · {s.facultyName}
+                  {s.room ? ` · Room ${s.room}` : ""}
+                </p>
               </div>
-            ))
-          : items.length === 0
-            ? <div className="flex flex-col items-center justify-center gap-1 py-12 text-gray-300">
-                <span className="text-3xl">📭</span>
-                <span className="text-xs">No notices yet</span>
-              </div>
-            : items.map(n => (
-                <div key={n.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-sm flex-shrink-0">
-                    {n.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-white truncate">{n.title}</p>
-                    {n.sub && <p className="text-[10px] text-gray-400 truncate">{n.sub}</p>}
-                    <p className="text-[10px] text-gray-400">{sd(n.date)}</p>
-                  </div>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${n.tagCls}`}>
-                    {n.tag}
-                  </span>
-                </div>
-              ))
-        }
+            );
+          })
+        )}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Link href="/dashboard/timetable" className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+          Open Timetable
+        </Link>
+        <Link href="/dashboard/faculty" className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+          Faculty Allocation
+        </Link>
       </div>
     </div>
   );
@@ -271,6 +423,9 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [charts, setCharts] = useState<Charts | null>(null);
   const [modules, setModules] = useState<ModulesMap | null>(null);
+  const [userRole, setUserRole] = useState<string>("");
+  const [todaySlots, setTodaySlots] = useState<TimetableSlot[]>([]);
+  const [slotsL, setSlotsL] = useState(true);
   const [statsL, setStatsL] = useState(true);
   const [chartsL, setChartsL] = useState(true);
   /** Recharts needs a mounted client layout; avoids 0×0 ResponsiveContainer. */
@@ -289,6 +444,12 @@ export default function DashboardPage() {
         else setModules(null);
       })
       .catch(() => setModules(null));
+    authFetch("/api/auth/me")
+      .then(async (r) => {
+        const data = await r.json().catch(() => null);
+        setUserRole(typeof data?.user?.role === "string" ? data.user.role : "");
+      })
+      .catch(() => setUserRole(""));
   }, []);
 
   useEffect(() => {
@@ -306,6 +467,19 @@ export default function DashboardPage() {
         else setCharts(data as Charts);
       })
       .finally(() => setChartsL(false));
+    authFetch("/api/timetable")
+      .then(async (r) => {
+        const data = await r.json().catch(() => []);
+        if (!r.ok || !Array.isArray(data)) {
+          setTodaySlots([]);
+          return;
+        }
+        const jsDay = new Date().getDay();
+        const todayIdx = jsDay === 0 ? -1 : jsDay - 1;
+        setTodaySlots(todayIdx < 0 ? [] : (data as TimetableSlot[]).filter((s) => s.dayOfWeek === todayIdx));
+      })
+      .catch(() => setTodaySlots([]))
+      .finally(() => setSlotsL(false));
   }, []);
 
   const gridStroke = isDark ? "#374151" : "#e5e7eb";
@@ -313,9 +487,72 @@ export default function DashboardPage() {
 
   const batchDist = charts?.batchDistribution ?? [];
   const totalBatch = batchDist.reduce((s, b) => s + (b?.value ?? 0), 0);
+  const normalizedRole = userRole.toUpperCase();
+  const roleDefaultModules = useMemo(() => {
+    if (!normalizedRole) return null;
+    const leadershipRoles = new Set(["ADMIN", "CMD", "PRINCIPAL"]);
+    if (leadershipRoles.has(normalizedRole)) {
+      return new Set([
+        "dashboard",
+        "students",
+        "faculty",
+        "users",
+        "fees",
+        "courses",
+        "events",
+        "attendance",
+        "assignments",
+        "reports",
+        "timetable",
+        "batchCourses",
+        "digitalLibrary",
+        "settings",
+        "onboarding",
+      ]);
+    }
+    const facultyRoles = new Set([
+      "ASSISTANT_PROFESSOR",
+      "PROFESSOR",
+      "CLINICAL_STAFF",
+      "GUEST_PROFESSOR",
+    ]);
+    if (facultyRoles.has(normalizedRole)) {
+      return new Set([
+        "dashboard",
+        "batchCourses",
+        "students",
+        "assignments",
+        "examGrades",
+        "events",
+        "timetable",
+        "digitalLibrary",
+        "settings",
+      ]);
+    }
+    const studentRoles = new Set(["STUDENT", "GUEST_STUDENT"]);
+    if (studentRoles.has(normalizedRole)) {
+      return new Set([
+        "dashboard",
+        "attendance",
+        "assignments",
+        "examGrades",
+        "fees",
+        "events",
+        "digitalLibrary",
+        "settings",
+      ]);
+    }
+    return new Set(["dashboard", "settings"]);
+  }, [normalizedRole]);
+
   const canView = (module: string) => {
-    if (!modules) return true;
-    return modules[module]?.view === true;
+    const permCell = modules?.[module];
+    if (permCell) {
+      const roleAllows = roleDefaultModules ? roleDefaultModules.has(module) : true;
+      return permCell.view === true && roleAllows;
+    }
+    if (!modules && !roleDefaultModules) return true;
+    return roleDefaultModules?.has(module) ?? false;
   };
   const canCreate = (module: string) => {
     if (!modules) return false;
@@ -323,18 +560,33 @@ export default function DashboardPage() {
   };
 
   const pendingAmt = stats?.pendingFeesAmount ?? 0;
+  const isStudentDashboard = normalizedRole === "STUDENT" || normalizedRole === "GUEST_STUDENT";
   const CARDS = [
     { module: "students", label: "Total Students", value: stats?.totalStudents ?? 0,              sub: `${stats?.totalBatches ?? 0} batches · ${stats?.totalSections ?? 0} sections`, Icon: GraduationCap, bg: "bg-blue-50",    ic: "text-blue-600", href: "/dashboard/students" },
     { module: "faculty", label: "Faculty",        value: stats?.totalFaculty ?? 0,               sub: `${stats?.totalDepartments ?? 0} departments`,                                  Icon: Users,         bg: "bg-violet-50", ic: "text-violet-600", href: "/dashboard/faculty" },
     { module: "users", label: "Total Staff",    value: stats?.totalUsers ?? 0,                 sub: "Active accounts",                                                              Icon: Building2,     bg: "bg-cyan-50",   ic: "text-cyan-600", href: "/dashboard/users" },
-    { module: "fees", label: "Fee Collected",  value: fmt(stats?.feeCollectedThisMonth ?? 0), sub: `${stats?.pendingFeesCount ?? 0} pending · ${fmt(pendingAmt)} due`,              Icon: Wallet,        bg: "bg-emerald-50",ic: "text-emerald-600", href: "/dashboard/fees?tab=payments&status=PENDING" },
+    {
+      module: "fees",
+      label: isStudentDashboard ? "Fee Due" : "Fee Collected",
+      value: isStudentDashboard ? fmt(pendingAmt) : fmt(stats?.feeCollectedThisMonth ?? 0),
+      sub: isStudentDashboard
+        ? `${stats?.pendingFeesCount ?? 0} pending payment(s)`
+        : `${stats?.pendingFeesCount ?? 0} pending · ${fmt(pendingAmt)} due`,
+      Icon: Wallet,
+      bg: "bg-emerald-50",
+      ic: "text-emerald-600",
+      href: "/dashboard/fees?tab=payments&status=PENDING",
+    },
     { module: "courses", label: "Courses",        value: stats?.totalCourses ?? 0,               sub: `${stats?.totalBatches ?? 0} active batches`,                                   Icon: BookOpen,      bg: "bg-amber-50",  ic: "text-amber-600", href: "/dashboard/courses" },
     { module: "events", label: "Events Ahead",   value: stats?.upcomingEventsCount ?? 0,        sub: "Upcoming",                                                                     Icon: CalendarCheck, bg: "bg-rose-50",   ic: "text-rose-600", href: "/dashboard/events" },
+    { module: "assignments", label: "Assignments", value: charts?.recentAssignments?.length ?? 0, sub: "Recent items",                                                                 Icon: BookOpen,      bg: "bg-indigo-50", ic: "text-indigo-600", href: "/dashboard/assignments" },
   ].filter((c) => canView(c.module));
   const showBatchDist = canView("students");
   const showAttendance = canView("attendance");
   const showNotice = canView("events") || canView("assignments");
-  const showCalendar = canView("events");
+  const leadershipRoles = new Set(["ADMIN", "CMD", "PRINCIPAL"]);
+  const showLeadershipTimetable = leadershipRoles.has(userRole) && canView("timetable");
+  const dayLabel = new Date().toLocaleDateString("en-IN", { weekday: "long" });
 
   return (
     <div className="flex flex-col gap-4 pb-2">
@@ -349,6 +601,10 @@ export default function DashboardPage() {
 
       {/* Charts + widgets: explicit min-heights so rows never collapse; main scrolls */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {showLeadershipTimetable && (
+          <LeadershipTimetableCard slots={todaySlots} loading={slotsL} dayLabel={dayLabel} />
+        )}
+
         {/* Students by Batch (Donut) */}
         {showBatchDist && (
         <div className="flex min-h-[320px] flex-col rounded-xl bg-white p-4 shadow-sm dark:bg-gray-900">
@@ -479,16 +735,13 @@ export default function DashboardPage() {
         </div>
         )}
 
-        {showNotice && <NoticeBoard
-          recentEvents={charts?.recentEvents ?? []}
-          recentAssignments={charts?.recentAssignments ?? []}
-          loading={chartsL}
-        />}
-
-        {showCalendar && <MiniCalendar
-          eventDays={charts?.eventDays ?? []}
-          upcomingEvents={charts?.upcomingEvents ?? []}
-        />}
+        {showNotice && (
+          <NoticeBoard
+            recentEvents={charts?.recentEvents ?? []}
+            recentAssignments={charts?.recentAssignments ?? []}
+            loading={chartsL}
+          />
+        )}
 
       </div>
     </div>

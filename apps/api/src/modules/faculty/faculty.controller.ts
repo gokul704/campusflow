@@ -7,12 +7,14 @@ const createSchema = z.object({
   departmentId: z.string(),
   designation: z.string().min(2),
   qualification: z.string().optional(),
+  experience: z.string().optional(),
 });
 
 const updateSchema = z.object({
   departmentId: z.string().optional(),
   designation: z.string().min(2).optional(),
   qualification: z.string().optional(),
+  experience: z.string().optional(),
 });
 
 const createWithUserSchema = z.object({
@@ -23,6 +25,7 @@ const createWithUserSchema = z.object({
   phone: z.string().optional().nullable(),
   designation: z.string().min(2),
   qualification: z.string().optional().nullable(),
+  experience: z.string().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   departmentCode: z.string().optional().nullable(),
   departmentName: z.string().optional().nullable(),
@@ -39,13 +42,10 @@ export async function bulkCreateFacultyHandler(req: Request, res: Response): Pro
     res.status(400).json({ error: r.error.flatten() });
     return;
   }
-  try {
-    res.status(201).json(
-      await svc.bulkCreateFacultyWithUsers(req.tenant.id, r.data.rows, r.data.defaultPassword)
-    );
-  } catch (e: unknown) {
-    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
-  }
+  res.status(400).json({
+    error:
+      "Bulk faculty import from this endpoint is disabled. Create user accounts in Users first, then attach faculty profiles.",
+  });
 }
 
 export async function listFacultyHandler(req: Request, res: Response): Promise<void> {

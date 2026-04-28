@@ -13,6 +13,7 @@ interface AccountWithoutProfile {
   firstName: string;
   lastName: string;
   email: string;
+  role: "STUDENT" | "GUEST_STUDENT";
   isActive: boolean;
   portalAccessRestricted: boolean;
 }
@@ -31,7 +32,6 @@ interface Student {
     portalRestrictionReason?: string | null;
   };
   batch: { name: string };
-  section?: { name: string };
 }
 
 interface StudentDetailSlot {
@@ -41,7 +41,6 @@ interface StudentDetailSlot {
   room?: string | null;
   batchCourse: {
     batch: { name: string };
-    section?: { name: string };
     course: { name: string; code: string };
     faculty?: { user: { firstName: string; lastName: string } } | null;
   };
@@ -65,11 +64,6 @@ interface Batch {
   id: string;
   name: string;
 }
-interface Section {
-  id: string;
-  name: string;
-}
-
 function normHeader(s: string) {
   return String(s).toLowerCase().replace(/[\s_-]/g, "");
 }
@@ -103,20 +97,15 @@ function rowFromExcel(r: Record<string, unknown>): BulkRow | null {
   const email = excelCell(r, "email");
   if (!email) return null;
   const batchId = excelCell(r, "batchid", "batch id", "batch_id");
-  const sectionId = excelCell(r, "sectionid", "section id", "section_id");
   const batchName =
     excelCell(r, "batchname", "batch name", "batch", "programme", "program", "class", "cohort") || undefined;
-  const sectionName =
-    excelCell(r, "sectionname", "section name", "sec", "division", "group") || undefined;
   return {
     email,
     firstName: excelCell(r, "firstname", "first name", "first_name"),
     lastName: excelCell(r, "lastname", "last name", "last_name"),
     rollNumber: excelCell(r, "rollnumber", "roll", "roll_number", "roll no"),
     batchId: batchId || undefined,
-    sectionId: sectionId || undefined,
     batchName,
-    sectionName,
     phone: excelCell(r, "phone", "mobile") || undefined,
     dateOfBirth: excelCell(r, "dateofbirth", "dob", "date of birth", "date_of_birth") || undefined,
     parentName: excelCell(r, "parentname", "parent name", "parent_name") || undefined,
@@ -135,7 +124,6 @@ function downloadStudentTemplate() {
     "Last Name",
     "Roll Number",
     "Batch Name",
-    "Section Name",
     "Phone",
     "Date of birth",
     "Parent name",
@@ -155,25 +143,22 @@ export default function StudentsPage() {
   const [accountsWithoutProfile, setAccountsWithoutProfile] = useState<AccountWithoutProfile[]>([]);
   const [total, setTotal] = useState(0);
   const [batches, setBatches] = useState<Batch[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
   const [filterBatch, setFilterBatch] = useState("");
-  const [filterSection, setFilterSection] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
-  const [formSections, setFormSections] = useState<Section[]>([]);
   const [form, setForm] = useState({
     email: "",
     firstName: "",
     lastName: "",
+    role: "STUDENT",
     password: "",
     phone: "",
     dateOfBirth: "",
     batchId: "",
-    sectionId: "",
     rollNumber: "",
     parentName: "",
     parentPhone: "",
@@ -199,6 +184,7 @@ export default function StudentsPage() {
   const [portalReasonDraft, setPortalReasonDraft] = useState("");
   const [portalBusy, setPortalBusy] = useState(false);
   const [portalErr, setPortalErr] = useState("");
+  const allowDirectStudentUserCreation = false;
 
   const canManagePortal = Boolean(meRole && PORTAL_MANAGERS.has(meRole));
 
@@ -285,7 +271,6 @@ export default function StudentsPage() {
     setLoading(true);
     const p = new URLSearchParams({ page: String(page), limit: "20" });
     if (filterBatch) p.set("batchId", filterBatch);
-    if (filterSection) p.set("sectionId", filterSection);
     if (search) p.set("search", search);
     const res = await authFetch(`/api/students?${p}`);
     const data = await res.json();
@@ -331,19 +316,8 @@ export default function StudentsPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (filterBatch) {
-      authFetch(`/api/sections?batchId=${filterBatch}`)
-        .then((r) => r.json())
-        .then((d) => setSections(Array.isArray(d) ? d : []));
-    } else {
-      setSections([]);
-    }
-    setFilterSection("");
-  }, [filterBatch]);
-
-  useEffect(() => {
     void fetchStudents();
-  }, [page, filterBatch, filterSection]);
+  }, [page, filterBatch]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -353,28 +327,17 @@ export default function StudentsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => {
-    if (form.batchId) {
-      authFetch(`/api/sections?batchId=${form.batchId}`)
-        .then((r) => r.json())
-        .then((d) => setFormSections(Array.isArray(d) ? d : []));
-    } else {
-      setFormSections([]);
-    }
-    setForm((f) => ({ ...f, sectionId: "" }));
-  }, [form.batchId]);
-
   function openCreateForm() {
     setFormEmailLocked(false);
     setForm({
       email: "",
       firstName: "",
       lastName: "",
+      role: "STUDENT",
       password: "",
       phone: "",
       dateOfBirth: "",
       batchId: "",
-      sectionId: "",
       rollNumber: "",
       parentName: "",
       parentPhone: "",
@@ -390,11 +353,11 @@ export default function StudentsPage() {
       email: a.email,
       firstName: a.firstName,
       lastName: a.lastName,
+      role: a.role,
       password: "",
       phone: "",
       dateOfBirth: "",
       batchId: "",
-      sectionId: "",
       rollNumber: "",
       parentName: "",
       parentPhone: "",
@@ -427,11 +390,11 @@ export default function StudentsPage() {
       for (const r of raw) {
         const parsed = rowFromExcel(r);
         if (!parsed) continue;
-        const byId = parsed.batchId && parsed.sectionId;
-        const byName = parsed.batchName && parsed.sectionName;
+        const byId = parsed.batchId;
+        const byName = parsed.batchName;
         if (!parsed.firstName || !parsed.lastName || !parsed.rollNumber || (!byId && !byName)) {
           setImportParseError(
-            `Each data row needs Email, First Name, Last Name, Roll Number, and either (Batch Name + Section Name) or (Batch ID + Section ID). Check row for ${parsed.email || "(blank email)"}.`
+            `Each data row needs Email, First Name, Last Name, Roll Number, and Batch Name (or Batch ID). Check row for ${parsed.email || "(blank email)"}.`
           );
           return;
         }
@@ -452,12 +415,16 @@ export default function StudentsPage() {
     setFormError("");
     setFormLoading(true);
     try {
+      if (!formEmailLocked && !allowDirectStudentUserCreation) {
+        setFormError("Create the user account in Users first, then complete the student profile here.");
+        return;
+      }
       const body: Record<string, unknown> = {
         email: form.email.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
+        role: form.role,
         batchId: form.batchId,
-        sectionId: form.sectionId,
         rollNumber: form.rollNumber.trim(),
         parentName: form.parentName.trim() || null,
         parentPhone: form.parentPhone.trim() || null,
@@ -465,7 +432,7 @@ export default function StudentsPage() {
         phone: form.phone.trim() || null,
         dateOfBirth: form.dateOfBirth.trim() || null,
       };
-      if (form.password.trim().length >= 8) body.password = form.password.trim();
+      if (allowDirectStudentUserCreation && form.password.trim().length >= 8) body.password = form.password.trim();
       const res = await authFetch("/api/students", { method: "POST", body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -516,10 +483,10 @@ export default function StudentsPage() {
     }
   }
 
-  const showPendingRows = page === 1 && !filterBatch && !filterSection;
+  const showPendingRows = page === 1 && !filterBatch;
 
   const pendingRowsForTable = useMemo(() => {
-    if (meRole === "PRESENT_STUDENT" && myUserId) {
+    if (meRole === "STUDENT" && myUserId) {
       return accountsWithoutProfile.filter((a) => a.userId !== myUserId);
     }
     return accountsWithoutProfile;
@@ -530,7 +497,7 @@ export default function StudentsPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Students</h1>
         <div className="flex flex-wrap gap-2">
-          {canCreateStudent && (
+          {canCreateStudent && allowDirectStudentUserCreation && (
             <>
               <button type="button" onClick={downloadStudentTemplate} className={dash.btnSecondary}>
                 Download Excel template
@@ -545,6 +512,9 @@ export default function StudentsPage() {
           )}
         </div>
       </div>
+      <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+        User account creation is centralized in the Users page. Add user there first, then use "Complete profile" here.
+      </p>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input
@@ -569,23 +539,6 @@ export default function StudentsPage() {
             </option>
           ))}
         </select>
-        {filterBatch && (
-          <select
-            value={filterSection}
-            onChange={(e) => {
-              setFilterSection(e.target.value);
-              setPage(1);
-            }}
-            className={dash.select}
-          >
-            <option value="">All Sections</option>
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        )}
       </div>
 
       <div className={dash.tableWrap}>
@@ -596,7 +549,6 @@ export default function StudentsPage() {
               <th className={dash.th}>Name</th>
               <th className={dash.th}>Email</th>
               <th className={dash.th}>Batch</th>
-              <th className={dash.th}>Section</th>
               <th className={dash.th}>Status</th>
               <th className={`${dash.th} w-24 text-right`}>Actions</th>
             </tr>
@@ -604,13 +556,13 @@ export default function StudentsPage() {
           <tbody className={dash.tbodyDivide}>
             {loading ? (
               <tr>
-                <td colSpan={7} className={dash.emptyCell}>
+                <td colSpan={6} className={dash.emptyCell}>
                   Loading...
                 </td>
               </tr>
             ) : students.length === 0 && (!showPendingRows || pendingRowsForTable.length === 0) ? (
               <tr>
-                <td colSpan={7} className={dash.emptyCell}>
+                <td colSpan={6} className={dash.emptyCell}>
                   No students found
                 </td>
               </tr>
@@ -629,9 +581,6 @@ export default function StudentsPage() {
                         {a.firstName} {a.lastName}
                       </td>
                       <td className={`px-4 py-3 ${dash.cellMuted}`}>{a.email}</td>
-                      <td className={`px-4 py-3 ${dash.cellMuted}`}>
-                        <span className={dash.cellMuted}>&mdash;</span>
-                      </td>
                       <td className={`px-4 py-3 ${dash.cellMuted}`}>
                         <span className={dash.cellMuted}>&mdash;</span>
                       </td>
@@ -669,9 +618,6 @@ export default function StudentsPage() {
                     </td>
                     <td className={`px-4 py-3 ${dash.cellMuted}`}>{s.user.email}</td>
                     <td className={`px-4 py-3 ${dash.cellMuted}`}>{s.batch?.name}</td>
-                    <td className={`px-4 py-3 ${dash.cellMuted}`}>
-                      {s.section?.name ? s.section.name : <span className={dash.emDash}>&mdash;</span>}
-                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <span className={s.user.isActive ? dash.statusPillActive : dash.statusPillInactive}>
@@ -763,10 +709,6 @@ export default function StudentsPage() {
                       <dt className={dash.dt}>Batch</dt>
                       <dd className={dash.dd}>{viewStudent.batch?.name ?? "—"}</dd>
                     </div>
-                    <div className={`flex justify-between gap-4 ${dash.rowDivider}`}>
-                      <dt className={dash.dt}>Section</dt>
-                      <dd className={dash.dd}>{viewStudent.section?.name ?? "—"}</dd>
-                    </div>
                     {viewStudent.parentName?.trim() ? (
                       <div className={`flex justify-between gap-4 ${dash.rowDivider}`}>
                         <dt className={dash.dt}>Parent Name</dt>
@@ -852,7 +794,7 @@ export default function StudentsPage() {
                           <li key={slot.id} className={dash.scheduleCard}>
                             <p className={`font-medium ${dash.cellStrong}`}>{slot.batchCourse.course.name}</p>
                             <p className={`text-xs ${dash.cellMuted}`}>
-                              {slot.batchCourse.course.code} · Sec {slot.batchCourse.section?.name ?? "—"}
+                              {slot.batchCourse.course.code}
                             </p>
                             <p className={`mt-1 font-mono text-xs text-gray-600 dark:text-gray-400`}>
                               {slot.startTime} – {slot.endTime}
@@ -890,6 +832,7 @@ export default function StudentsPage() {
                     value={form.firstName}
                     onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
                     required
+                    readOnly={!allowDirectStudentUserCreation}
                     className={dash.input}
                   />
                 </div>
@@ -899,6 +842,7 @@ export default function StudentsPage() {
                     value={form.lastName}
                     onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
                     required
+                    readOnly={!allowDirectStudentUserCreation}
                     className={dash.input}
                   />
                 </div>
@@ -910,21 +854,36 @@ export default function StudentsPage() {
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   required
-                  readOnly={formEmailLocked}
+                  readOnly={formEmailLocked || !allowDirectStudentUserCreation}
                   className={`${dash.input} ${formEmailLocked ? "cursor-not-allowed bg-gray-100 dark:bg-gray-900/60" : ""}`}
                 />
               </div>
-              <div>
-                <label className={dash.label}>Password (optional)</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                  placeholder="Min 8 chars; else DEFAULT_NEW_USER_PASSWORD"
-                  autoComplete="new-password"
-                  className={dash.input}
-                />
-              </div>
+              {allowDirectStudentUserCreation && (
+                <>
+                  <div>
+                    <label className={dash.label}>Password (optional)</label>
+                    <input
+                      type="password"
+                      value={form.password}
+                      onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                      placeholder="Min 8 chars; else DEFAULT_NEW_USER_PASSWORD"
+                      autoComplete="new-password"
+                      className={dash.input}
+                    />
+                  </div>
+                  <div>
+                    <label className={dash.label}>Role</label>
+                    <select
+                      value={form.role}
+                      onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as "STUDENT" | "GUEST_STUDENT" }))}
+                      className={dash.selectFull}
+                    >
+                      <option value="STUDENT">Student</option>
+                      <option value="GUEST_STUDENT">Guest student</option>
+                    </select>
+                  </div>
+                </>
+              )}
               <div>
                 <label className={dash.label}>Phone (optional)</label>
                 <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className={dash.input} />
@@ -950,23 +909,6 @@ export default function StudentsPage() {
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={dash.label}>Section</label>
-                <select
-                  value={form.sectionId}
-                  onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))}
-                  required
-                  disabled={!form.batchId}
-                  className={dash.selectFullDisabled}
-                >
-                  <option value="">{form.batchId ? "Select section" : "Select a batch first"}</option>
-                  {formSections.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
                     </option>
                   ))}
                 </select>
@@ -1020,9 +962,8 @@ export default function StudentsPage() {
             <h2 className={`${dash.sectionTitle} mb-4`}>Import students from Excel</h2>
             <BulkImportOrderHint className="mb-3" />
             <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-              Use the downloaded template. Each row needs Email, First Name, Last Name, Roll Number, <strong>Batch Name</strong>,{" "}
-              <strong>Section Name</strong> (same text as in the app). Optional: Phone, Date of birth, Parent name, Parent phone,
-              Address, Password. You can still use Batch ID + Section ID columns instead if you prefer.
+              Use the downloaded template. Each row needs Email, First Name, Last Name, Roll Number, <strong>Batch Name</strong>.
+              Optional: Phone, Date of birth, Parent name, Parent phone, Address, Password. You can still use Batch ID column if you prefer.
             </p>
             {importParseError && <div className={dash.errorBanner}>{importParseError}</div>}
             {importSubmitError && <div className={dash.errorBanner}>{importSubmitError}</div>}

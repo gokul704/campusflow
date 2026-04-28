@@ -14,16 +14,15 @@ const createDirectUserSchema = z
     departmentId: z.string().optional().nullable(),
     designation: z.string().optional().nullable(),
     qualification: z.string().optional().nullable(),
+    experience: z.string().optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    if (data.role === Role.PRESENT_STUDENT) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Use the Students page for student accounts.",
-        path: ["role"],
-      });
-    }
-    if (data.role === Role.OPERATIONS_LECTURER) {
+    if (
+      data.role === Role.ASSISTANT_PROFESSOR ||
+      data.role === Role.PROFESSOR ||
+      data.role === Role.CLINICAL_STAFF ||
+      data.role === Role.GUEST_PROFESSOR
+    ) {
       if (!data.departmentId?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required for lecturer", path: ["departmentId"] });
       }
@@ -38,6 +37,10 @@ const updateSchema = z.object({
   lastName: z.string().min(1).optional(),
   phone: z.string().optional(),
   avatarUrl: z.string().url().optional(),
+});
+
+const changeRoleSchema = z.object({
+  role: z.nativeEnum(Role),
 });
 
 export async function createDirectUserHandler(req: Request, res: Response): Promise<void> {
@@ -110,5 +113,20 @@ export async function activateUserHandler(req: Request, res: Response): Promise<
     res.json(user);
   } catch {
     res.status(404).json({ error: "User not found" });
+  }
+}
+
+export async function changeUserRoleHandler(req: Request, res: Response): Promise<void> {
+  const result = changeRoleSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.flatten() });
+    return;
+  }
+  try {
+    const user = await usersService.setUserRole(req.tenant.id, String(req.params.id), result.data.role);
+    res.json(user);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Role update failed";
+    res.status(400).json({ error: message });
   }
 }

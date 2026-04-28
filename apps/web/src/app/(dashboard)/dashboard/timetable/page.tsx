@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authFetch, formatApiError } from "@/lib/api";
+import { toPng } from "html-to-image";
 import {
   alertBulkImportSummary,
   downloadExcelTemplate,
@@ -11,6 +12,9 @@ import {
 } from "@/lib/excelImport";
 import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
+
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
 
 interface TimetableSlot {
   id: string;
@@ -102,6 +106,7 @@ function timetableRowFromExcel(r: Record<string, unknown>): TimetableImportRow |
 }
 
 export default function TimetablePage() {
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [batches, setBatches] = useState<BatchItem[]>([]);
   const [batchCourses, setBatchCourses] = useState<BatchCourseOption[]>([]);
@@ -124,6 +129,25 @@ export default function TimetablePage() {
   const [importParseError, setImportParseError] = useState("");
   const [importSubmitError, setImportSubmitError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
+  const [showGridView, setShowGridView] = useState(false);
+  const [gridMode, setGridMode] = useState<"batch" | "faculty">("batch");
+  const [gridBatchId, setGridBatchId] = useState("");
+  const [gridFacultyName, setGridFacultyName] = useState("");
+  const [exportingImage, setExportingImage] = useState(false);
+  const gridExportRef = useRef<HTMLDivElement | null>(null);
+
+  const canManageTimetable = modules?.timetable?.create === true;
+  const canDeleteTimetableSlot = modules?.timetable?.delete === true;
+
+  useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.modules && typeof d.modules === "object") setModules(d.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
+  }, []);
 
   async function fetchSlots() {
     setLoading(true);
@@ -134,12 +158,21 @@ export default function TimetablePage() {
   }
 
   useEffect(() => {
-    authFetch("/api/batches").then(r => r.json()).then(d => setBatches(Array.isArray(d) ? d : []));
+    if (canManageTimetable) {
+      authFetch("/api/batches").then(r => r.json()).then(d => setBatches(Array.isArray(d) ? d : []));
+    } else {
+      setBatches([]);
+      setFilterBatchId("");
+    }
     fetchSlots();
-  }, []);
+  }, [canManageTimetable]);
 
-  // When filterBatchId changes, fetch batch-courses for the form
+  // When filterBatchId changes, fetch batch-courses for the form (office only)
   useEffect(() => {
+    if (!canManageTimetable) {
+      setBatchCourses([]);
+      return;
+    }
     if (filterBatchId) {
       authFetch(`/api/batch-courses?batchId=${filterBatchId}`)
         .then(r => r.json())
@@ -147,10 +180,11 @@ export default function TimetablePage() {
     } else {
       setBatchCourses([]);
     }
-  }, [filterBatchId]);
+  }, [filterBatchId, canManageTimetable]);
 
   // Fetch all batch-courses when form opens (for the form dropdown)
   async function openForm() {
+    if (!canManageTimetable) return;
     setForm({ batchCourseId: "", dayOfWeek: "0", startTime: "", endTime: "", room: "" });
     setFormError("");
     // Load all batch courses for the form if we have a batch filter
@@ -303,48 +337,123 @@ export default function TimetablePage() {
     slots: visibleSlots.filter(s => s.dayOfWeek === idx).sort((a, b) => a.startTime.localeCompare(b.startTime)),
   }));
 
+  const facultyOptions = Array.from(
+    new Set(
+      slots
+        .map((s) => s.batchCourse.faculty ? `${s.batchCourse.faculty.user.firstName} ${s.batchCourse.faculty.user.lastName}` : "")
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const gridSlots = slots.filter((s) => {
+    if (gridMode === "batch") {
+      if (!gridBatchId) return true;
+      const b = batches.find((x) => x.id === gridBatchId);
+      return b ? s.batchCourse.batch.name === b.name : true;
+    }
+    if (!gridFacultyName) return true;
+    const fname = s.batchCourse.faculty
+      ? `${s.batchCourse.faculty.user.firstName} ${s.batchCourse.faculty.user.lastName}`
+      : "";
+    return fname === gridFacultyName;
+  });
+
+  const timeKeys = Array.from(new Set(gridSlots.map((s) => `${s.startTime}-${s.endTime}`))).sort((a, b) => {
+    const [as] = a.split("-");
+    const [bs] = b.split("-");
+    return (as || "").localeCompare(bs || "");
+  });
+
+  async function exportGridAsImage() {
+    if (!gridExportRef.current) return;
+    setExportingImage(true);
+    try {
+      const selectedBatchName = batches.find((b) => b.id === gridBatchId)?.name ?? "all-batches";
+      const selectedFaculty = gridFacultyName || "all-faculty";
+      const label = gridMode === "batch" ? selectedBatchName : selectedFaculty;
+      const safe = label.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "timetable";
+      const dataUrl = await toPng(gridExportRef.current, {
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `timetable-${gridMode}-${safe}.png`;
+      a.click();
+    } catch {
+      alert("Could not export timetable image. Please try again.");
+    } finally {
+      setExportingImage(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className={dash.pageTitle}>Timetable</h1>
+        <div>
+          <h1 className={dash.pageTitle}>Timetable</h1>
+          {!canManageTimetable && (
+            <p className={`mt-1 max-w-xl text-xs ${dash.cellMuted}`}>
+              Your weekly class schedule (assigned papers only). Contact the office to request timetable changes.
+            </p>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("timetable-import-template.xlsx", "Timetable", [
-                "Batch Name",
-                "Section Name",
-                "Course Code",
-                "Semester",
-                "Day of week",
-                "Start Time",
-                "End Time",
-                "Room",
-              ])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-          <button type="button" onClick={openForm} className={dash.btnPrimary}>
-            + Add Slot
-          </button>
+          {canManageTimetable && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadExcelTemplate("timetable-import-template.xlsx", "Timetable", [
+                    "Batch Name",
+                    "Section Name",
+                    "Course Code",
+                    "Semester",
+                    "Day of week",
+                    "Start Time",
+                    "End Time",
+                    "Room",
+                  ])
+                }
+                className={dash.btnSecondary}
+              >
+                Download Excel template
+              </button>
+              <button type="button" onClick={openImport} className={dash.btnSecondary}>
+                Import Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGridMode("batch");
+                  setGridBatchId(filterBatchId || "");
+                  setGridFacultyName("");
+                  setShowGridView(true);
+                }}
+                className={dash.btnSecondary}
+              >
+                View
+              </button>
+              <button type="button" onClick={() => void openForm()} className={dash.btnPrimary}>
+                + Add Slot
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="mb-4 flex gap-3">
-        <select
-          value={filterBatchId}
-          onChange={e => setFilterBatchId(e.target.value)}
-          className={dash.select}
-        >
-          <option value="">All Batches</option>
-          {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
-      </div>
+      {canManageTimetable && (
+        <div className="mb-4 flex gap-3">
+          <select
+            value={filterBatchId}
+            onChange={e => setFilterBatchId(e.target.value)}
+            className={dash.select}
+          >
+            <option value="">All Batches</option>
+            {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </div>
+      )}
 
       {loading ? (
         <div className={`py-12 text-center ${dash.cellMuted}`}>Loading...</div>
@@ -364,9 +473,11 @@ export default function TimetablePage() {
                           <p className={`text-sm font-medium ${dash.cellStrong}`}>{slot.batchCourse.course.name}</p>
                           <p className={`text-xs ${dash.cellMuted}`}>{slot.batchCourse.course.code} · Batch: {slot.batchCourse.batch.name}</p>
                         </div>
-                        <button type="button" onClick={() => handleDelete(slot)} className={`ml-2 shrink-0 ${dash.btnDanger}`}>
-                          Delete
-                        </button>
+                        {canDeleteTimetableSlot ? (
+                          <button type="button" onClick={() => handleDelete(slot)} className={`ml-2 shrink-0 ${dash.btnDanger}`}>
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                       <div className={`mt-1 flex items-center gap-2 text-xs ${dash.cellMuted}`}>
                         <span className="font-mono">{slot.startTime} – {slot.endTime}</span>
@@ -386,7 +497,7 @@ export default function TimetablePage() {
         </div>
       )}
 
-      {showForm && (
+      {canManageTimetable && showForm && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} ${dash.modalScroll} max-h-[90vh] w-full max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Add Timetable Slot</h2>
@@ -472,7 +583,7 @@ export default function TimetablePage() {
         </div>
       )}
 
-      {showImport && (
+      {canManageTimetable && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} ${dash.modalScroll} max-h-[90vh] w-full max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import timetable slots</h2>
@@ -505,6 +616,120 @@ export default function TimetablePage() {
                 {importLoading ? "Importing…" : "Import"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showGridView && (
+        <div className={dash.modalOverlay}>
+          <div className={`${dash.modalPanel} ${dash.modalScroll} max-h-[92vh] w-[95vw] max-w-6xl`}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className={dash.sectionTitle}>Timetable View</h2>
+              <div className="flex gap-2">
+                <button type="button" onClick={exportGridAsImage} disabled={exportingImage} className={dash.btnPrimary}>
+                  {exportingImage ? "Exporting..." : "Download Image"}
+                </button>
+                <button type="button" onClick={() => setShowGridView(false)} className={dash.btnSecondary}>
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-4 flex flex-wrap items-end gap-3">
+              <div>
+                <label className={dash.label}>View Type</label>
+                <select
+                  value={gridMode}
+                  onChange={(e) => setGridMode(e.target.value as "batch" | "faculty")}
+                  className={dash.select}
+                >
+                  <option value="batch">Batch-wise</option>
+                  <option value="faculty">Faculty-wise</option>
+                </select>
+              </div>
+              {gridMode === "batch" ? (
+                <div>
+                  <label className={dash.label}>Batch</label>
+                  <select value={gridBatchId} onChange={(e) => setGridBatchId(e.target.value)} className={dash.select}>
+                    <option value="">All Batches</option>
+                    {batches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className={dash.label}>Faculty</label>
+                  <select
+                    value={gridFacultyName}
+                    onChange={(e) => setGridFacultyName(e.target.value)}
+                    className={dash.select}
+                  >
+                    <option value="">All Faculty</option>
+                    {facultyOptions.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className={dash.tableWrap} ref={gridExportRef}>
+              <table className="w-full min-w-[900px] border-collapse text-xs">
+                <thead className={dash.thead}>
+                  <tr>
+                    <th className={`${dash.th} w-32`}>Day / Time</th>
+                    {timeKeys.map((t) => (
+                      <th key={t} className={dash.th}>
+                        {t.replace("-", " - ")}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className={dash.tbodyDivide}>
+                  {DAYS.map((day, dayIdx) => (
+                    <tr key={day} className={dash.rowHover}>
+                      <td className="min-w-[120px] border border-gray-100 bg-gray-50 px-3 py-2 align-top text-xs font-semibold uppercase tracking-wide text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100">
+                        {day}
+                      </td>
+                      {timeKeys.map((tk) => {
+                        const [startTime, endTime] = tk.split("-");
+                        const cell = gridSlots.filter(
+                          (s) => s.dayOfWeek === dayIdx && s.startTime === startTime && s.endTime === endTime
+                        );
+                        return (
+                          <td key={`${day}-${tk}`} className="border border-gray-100 px-2 py-2 align-top dark:border-gray-800">
+                            {cell.length === 0 ? (
+                              <span className={dash.cellMuted}>—</span>
+                            ) : (
+                              <div className="space-y-1">
+                                {cell.map((s) => (
+                                  <div key={s.id} className="rounded border border-gray-200 bg-white p-1.5 dark:border-gray-700 dark:bg-gray-900">
+                                    <p className={`font-medium leading-tight ${dash.cellStrong}`}>{s.batchCourse.course.code}</p>
+                                    <p className={`leading-tight ${dash.cellMuted}`}>{s.batchCourse.course.name}</p>
+                                    <p className={`leading-tight ${dash.cellMuted}`}>Batch: {s.batchCourse.batch.name}</p>
+                                    {s.batchCourse.faculty && (
+                                      <p className={`leading-tight ${dash.cellMuted}`}>
+                                        {s.batchCourse.faculty.user.firstName} {s.batchCourse.faculty.user.lastName}
+                                      </p>
+                                    )}
+                                    {s.room ? <p className={`leading-tight ${dash.cellMuted}`}>Room: {s.room}</p> : null}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

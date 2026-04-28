@@ -13,10 +13,14 @@ import {
 import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
+
 interface FacultyMember {
   id: string;
   designation: string;
   qualification?: string;
+  experience?: string;
   user: { firstName: string; lastName: string; email: string; phone?: string | null; dateOfBirth?: string | null; isActive: boolean };
   department: { name: string; code: string };
 }
@@ -55,6 +59,7 @@ type FacultyImportRow = {
   designation: string;
   phone?: string;
   qualification?: string;
+  experience?: string;
   departmentCode?: string;
   departmentName?: string;
   departmentId?: string;
@@ -79,6 +84,7 @@ function facultyRowFromExcel(r: Record<string, unknown>): FacultyImportRow | nul
     designation: excelCell(r, "designation", "title", "role"),
     phone: excelCell(r, "phone", "mobile") || undefined,
     qualification: excelCell(r, "qualification", "degree") || undefined,
+    experience: excelCell(r, "experience", "teaching experience") || undefined,
     departmentCode: excelCell(r, "departmentcode", "department code", "dept code") || undefined,
     departmentName: excelCell(r, "departmentname", "department name", "dept name") || undefined,
     departmentId: excelCell(r, "departmentid", "department id") || undefined,
@@ -88,6 +94,7 @@ function facultyRowFromExcel(r: Record<string, unknown>): FacultyImportRow | nul
 
 export default function FacultyPage() {
   const searchParams = useSearchParams();
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [faculty, setFaculty] = useState<FacultyMember[]>([]);
   const [total, setTotal] = useState(0);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -97,7 +104,7 @@ export default function FacultyPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [users, setUsers] = useState<UserOption[]>([]);
-  const [form, setForm] = useState({ userId: "", departmentId: "", designation: "", qualification: "" });
+  const [form, setForm] = useState({ userId: "", departmentId: "", designation: "", qualification: "", experience: "" });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
 
@@ -111,6 +118,8 @@ export default function FacultyPage() {
   const [viewFaculty, setViewFaculty] = useState<FacultyDetail | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewError, setViewError] = useState("");
+  const allowFacultyImportWithUserCreation = false;
+  const canManageFaculty = modules?.faculty?.create === true;
 
   async function openView(facultyId: string) {
     setViewFaculty(null);
@@ -150,6 +159,13 @@ export default function FacultyPage() {
   }
 
   useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.modules && typeof d.modules === "object") setModules(d.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
     authFetch("/api/departments").then(r => r.json()).then(setDepartments);
   }, []);
 
@@ -166,9 +182,12 @@ export default function FacultyPage() {
   }, [search]);
 
   async function openForm() {
-    const res = await authFetch("/api/users?role=OPERATIONS_LECTURER&limit=100");
-    const data = await res.json();
-    setUsers(data.users ?? []);
+    const roles = ["ASSISTANT_PROFESSOR", "PROFESSOR", "CLINICAL_STAFF", "GUEST_PROFESSOR"];
+    const responses = await Promise.all(roles.map((r) => authFetch(`/api/users?role=${r}&limit=100`)));
+    const payloads = await Promise.all(responses.map((r) => r.json().catch(() => ({ users: [] }))));
+    const merged = payloads.flatMap((d) => (Array.isArray(d) ? d : d.users ?? []));
+    const dedup = Array.from(new Map(merged.map((u: { id: string }) => [u.id, u])).values());
+    setUsers(dedup);
     setShowForm(true);
   }
 
@@ -181,7 +200,7 @@ export default function FacultyPage() {
       const data = await res.json();
       if (!res.ok) { setFormError(data.error ?? "Failed"); return; }
       setShowForm(false);
-      setForm({ userId: "", departmentId: "", designation: "", qualification: "" });
+      setForm({ userId: "", departmentId: "", designation: "", qualification: "", experience: "" });
       fetchFaculty();
     } catch { setFormError("Something went wrong"); }
     finally { setFormLoading(false); }
@@ -258,38 +277,43 @@ export default function FacultyPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className={dash.pageTitle}>Faculty</h1>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("faculty-import-template.xlsx", "Faculty", [
-                "Email",
-                "First Name",
-                "Last Name",
-                "Faculty",
-                "Designation",
-                "Department Code",
-                "Qualification",
-                "Phone",
-                "Password",
-              ])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-          <button type="button" onClick={openForm} className={dash.btnPrimary}>
-            + Add Faculty Profile
-          </button>
+          {allowFacultyImportWithUserCreation && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadExcelTemplate("faculty-import-template.xlsx", "Faculty", [
+                    "Email",
+                    "First Name",
+                    "Last Name",
+                    "Faculty",
+                    "Designation",
+                    "Department Code",
+                    "Qualification",
+                    "Phone",
+                    "Password",
+                  ])
+                }
+                className={dash.btnSecondary}
+              >
+                Download Excel template
+              </button>
+              <button type="button" onClick={openImport} className={dash.btnSecondary}>
+                Import Excel
+              </button>
+            </>
+          )}
+          {canManageFaculty ? (
+            <button type="button" onClick={openForm} className={dash.btnPrimary}>
+              + Add Faculty Profile
+            </button>
+          ) : null}
         </div>
       </div>
 
       <p className="mb-4 max-w-3xl text-xs text-gray-500 dark:text-gray-400">
-        Excel import creates the login and faculty profile together. Leave password blank to use{" "}
-        <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">DEFAULT_NEW_USER_PASSWORD</code> from the API .env (min 8
-        characters), or set a default below.
+        User account creation is centralized in the Users page. Create a faculty-role user (Assistant Professor / Professor /
+        Clinical Staff / Guest Professor) there, then attach faculty profile details here.
       </p>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -399,6 +423,12 @@ export default function FacultyPage() {
                       <dd className={dash.dd}>{viewFaculty.qualification}</dd>
                     </div>
                   ) : null}
+                  {viewFaculty.experience?.trim() ? (
+                    <div className={`flex justify-between gap-4 ${dash.rowDivider}`}>
+                      <dt className={dash.dt}>Experience</dt>
+                      <dd className={dash.dd}>{viewFaculty.experience}</dd>
+                    </div>
+                  ) : null}
                   <div className={`flex justify-between gap-4 ${dash.rowDivider}`}>
                     <dt className={dash.dt}>Status</dt>
                     <dd className="text-right">
@@ -438,7 +468,7 @@ export default function FacultyPage() {
         </div>
       )}
 
-      {showForm && (
+      {canManageFaculty && showForm && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-w-md`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Add Faculty Profile</h2>
@@ -472,6 +502,15 @@ export default function FacultyPage() {
                   placeholder="M.Tech, PhD..."
                   className={dash.input} />
               </div>
+              <div>
+                <label className={dash.label}>Experience</label>
+                <input
+                  value={form.experience}
+                  onChange={e => setForm(f => ({ ...f, experience: e.target.value }))}
+                  placeholder="e.g. 8 years"
+                  className={dash.input}
+                />
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className={`flex-1 ${dash.btnSecondary}`}>Cancel</button>
                 <button type="submit" disabled={formLoading} className={`flex-1 ${dash.btnPrimary}`}>
@@ -483,7 +522,7 @@ export default function FacultyPage() {
         </div>
       )}
 
-      {showImport && (
+      {allowFacultyImportWithUserCreation && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-w-lg`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import faculty</h2>

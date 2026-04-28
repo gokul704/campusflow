@@ -1,11 +1,147 @@
 import { Request, Response } from "express";
-import { Role } from "@campusflow/db";
+import { prisma, Role } from "@campusflow/db";
 import * as svc from "./reports.service";
 import { LEADERSHIP_ROLES } from "../../middleware/roleGroups";
 
+const FACULTY_ROLES: Role[] = [
+  Role.ASSISTANT_PROFESSOR,
+  Role.PROFESSOR,
+  Role.CLINICAL_STAFF,
+  Role.GUEST_PROFESSOR,
+];
+
+function isStudentRole(role: Role): boolean {
+  return role === Role.STUDENT || role === Role.GUEST_STUDENT;
+}
+
+async function canAccessBatchCourse(req: Request, batchCourseId: string): Promise<boolean> {
+  const role = req.user?.role as Role | undefined;
+  const userId = req.user?.id;
+  if (!role || !userId) return false;
+  if (!batchCourseId) return false;
+  if (LEADERSHIP_ROLES.includes(role)) return true;
+
+  const bc = await prisma.batchCourse.findFirst({
+    where: { id: batchCourseId, tenantId: req.tenant.id },
+    select: { id: true, batchId: true, faculty: { select: { userId: true } } },
+  });
+  if (!bc) return false;
+
+  if (isStudentRole(role)) {
+    const st = await prisma.student.findFirst({
+      where: { userId, tenantId: req.tenant.id },
+      select: { batchId: true },
+    });
+    return Boolean(st && st.batchId === bc.batchId);
+  }
+
+  if (FACULTY_ROLES.includes(role)) {
+    return bc.faculty?.userId === userId;
+  }
+
+  return true;
+}
+
+function canAccessAggregateReports(role: Role): boolean {
+  return LEADERSHIP_ROLES.includes(role);
+}
+
 export async function attendanceReportHandler(req: Request, res: Response): Promise<void> {
   try {
-    res.json(await svc.attendanceReport(req.tenant.id, String(req.params.batchCourseId)));
+    const batchCourseId = String(req.params.batchCourseId);
+    if (!(await canAccessBatchCourse(req, batchCourseId))) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    res.json(await svc.attendanceReport(req.tenant.id, batchCourseId));
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
+export async function attendanceCourseWiseReportHandler(req: Request, res: Response): Promise<void> {
+  try {
+    if (!canAccessAggregateReports(req.user!.role as Role)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    res.json(await svc.attendanceCourseWiseReport(req.tenant.id));
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
+export async function attendanceStudentWiseReportHandler(req: Request, res: Response): Promise<void> {
+  try {
+    let studentId = String(req.query.studentId ?? "").trim();
+    if (!studentId) {
+      res.status(400).json({ error: "studentId is required" });
+      return;
+    }
+    const role = req.user!.role as Role;
+    if (isStudentRole(role)) {
+      const st = await prisma.student.findFirst({
+        where: { userId: req.user!.id, tenantId: req.tenant.id },
+        select: { id: true },
+      });
+      if (!st) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      studentId = st.id;
+    } else if (!LEADERSHIP_ROLES.includes(role)) {
+      // Faculty/others can access only students from their own batch-courses.
+      const targetStudent = await prisma.student.findFirst({
+        where: { id: studentId, tenantId: req.tenant.id },
+        select: { batchId: true },
+      });
+      if (!targetStudent) {
+        res.status(404).json({ error: "Student not found" });
+        return;
+      }
+      if (FACULTY_ROLES.includes(role)) {
+        const faculty = await prisma.faculty.findFirst({
+          where: { userId: req.user!.id, tenantId: req.tenant.id },
+          select: { id: true },
+        });
+        if (!faculty) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+        const allowed = await prisma.batchCourse.count({
+          where: { tenantId: req.tenant.id, batchId: targetStudent.batchId, facultyId: faculty.id },
+        });
+        if (allowed === 0) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+      }
+    }
+    res.json(await svc.attendanceStudentWiseReport(req.tenant.id, studentId));
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
+export async function attendanceBatchWiseReportHandler(req: Request, res: Response): Promise<void> {
+  try {
+    if (!canAccessAggregateReports(req.user!.role as Role)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    res.json(await svc.attendanceBatchWiseReport(req.tenant.id));
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
+  }
+}
+
+export async function attendanceSemesterWiseReportHandler(req: Request, res: Response): Promise<void> {
+  try {
+    if (!canAccessAggregateReports(req.user!.role as Role)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    res.json(await svc.attendanceSemesterWiseReport(req.tenant.id));
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
   }
@@ -13,7 +149,12 @@ export async function attendanceReportHandler(req: Request, res: Response): Prom
 
 export async function gradeReportHandler(req: Request, res: Response): Promise<void> {
   try {
-    res.json(await svc.gradeReport(req.tenant.id, String(req.params.batchCourseId)));
+    const batchCourseId = String(req.params.batchCourseId);
+    if (!(await canAccessBatchCourse(req, batchCourseId))) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    res.json(await svc.gradeReport(req.tenant.id, batchCourseId));
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
   }
@@ -43,6 +184,20 @@ export async function exportCsvReportHandler(req: Request, res: Response): Promi
   }
 
   try {
+    if (["attendance", "general"].includes(type) && !canAccessAggregateReports(req.user!.role as Role)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (["assignments", "exams", "timetable"].includes(type)) {
+      if (!batchCourseId && !canAccessAggregateReports(req.user!.role as Role)) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      if (batchCourseId && !(await canAccessBatchCourse(req, batchCourseId))) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
     let csv: string;
     let filename: string;
     switch (type) {

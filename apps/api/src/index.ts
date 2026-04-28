@@ -25,12 +25,13 @@ import reportsRoutes from "./modules/reports/reports.routes";
 import eventsRoutes from "./modules/events/events.routes";
 import examGradesRoutes from "./modules/exam-grades/exam-grades.routes";
 import notificationsRoutes from "./modules/notifications/notifications.routes";
-import sectionsRoutes from "./modules/sections/sections.routes";
 import searchRoutes from "./modules/search/search.routes";
 import tenantRoutes from "./modules/tenant/tenant.routes";
+import digitalLibraryRoutes from "./modules/digital-library/digital-library.routes";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
+const JSON_BODY_LIMIT = "75mb";
 
 /** Production CORS: *.campusflow.io, *.onrender.com, *.vercel.app, localhost, and CORS_ORIGINS (comma-separated full origins). */
 function productionCorsAllowed(origin: string | undefined): boolean {
@@ -69,7 +70,7 @@ app.use(
   })
 );
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use("/api", apiLimiter);
 
 // ─── Super-admin routes ───────────────────────────────────────────────────────
@@ -94,9 +95,9 @@ app.use("/api/reports", reportsRoutes);
 app.use("/api/events", eventsRoutes);
 app.use("/api/exam-grades", examGradesRoutes);
 app.use("/api/notifications", notificationsRoutes);
-app.use("/api/sections", sectionsRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/tenant", tenantRoutes);
+app.use("/api/digital-library", digitalLibraryRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get("/health", (_, res) => {

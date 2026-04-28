@@ -12,25 +12,24 @@ import {
 import { BulkImportOrderHint } from "@/components/dashboard/BulkImportGuide";
 import { dash } from "@/lib/dashboardUi";
 
+type PermCell = { view: boolean; create: boolean; edit: boolean; delete: boolean };
+type ModulesMap = Record<string, PermCell>;
+
 interface BatchCourse {
   id: string;
   semester: number;
   batch?: { name: string };
   course?: { name: string; code: string };
-  section?: { name: string | null };
   faculty?: { user?: { firstName: string; lastName: string } | null } | null;
 }
 
 interface BatchItem { id: string; name: string; }
-interface SectionItem { id: string; name: string; }
 interface CourseItem { id: string; name: string; code: string; }
 interface FacultyItem { id: string; user: { firstName: string; lastName: string }; }
 
 type BatchCourseImportRow = {
   batchId?: string;
-  sectionId?: string;
   batchName?: string;
-  sectionName?: string;
   courseCode?: string;
   courseId?: string;
   semester: number;
@@ -40,9 +39,7 @@ type BatchCourseImportRow = {
 
 function batchCourseRowFromExcel(r: Record<string, unknown>): BatchCourseImportRow | null {
   const batchId = excelCell(r, "batchid", "batch id", "batch_id");
-  const sectionId = excelCell(r, "sectionid", "section id", "section_id");
   const batchName = excelCell(r, "batchname", "batch name", "batch") || undefined;
-  const sectionName = excelCell(r, "sectionname", "section name", "section", "sec", "division") || undefined;
   const courseCodeRaw = excelCell(
     r,
     "coursecode",
@@ -60,12 +57,10 @@ function batchCourseRowFromExcel(r: Record<string, unknown>): BatchCourseImportR
   const semester = Number(excelCell(r, "semester", "sem"));
   const facultyEmail = excelCell(r, "facultyemail", "faculty email", "teacher email") || undefined;
   const facultyId = excelCell(r, "facultyid", "faculty id") || undefined;
-  if (!batchId && !sectionId && !batchName && !sectionName && !courseCode && !courseId) return null;
+  if (!batchId && !batchName && !courseCode && !courseId) return null;
   return {
     batchId: batchId || undefined,
-    sectionId: sectionId || undefined,
     batchName,
-    sectionName,
     courseCode,
     courseId,
     semester,
@@ -75,22 +70,20 @@ function batchCourseRowFromExcel(r: Record<string, unknown>): BatchCourseImportR
 }
 
 export default function BatchCoursesPage() {
+  const [modules, setModules] = useState<ModulesMap | null>(null);
   const [batchCourses, setBatchCourses] = useState<BatchCourse[]>([]);
   const [batches, setBatches] = useState<BatchItem[]>([]);
-  const [sections, setSections] = useState<SectionItem[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [faculty, setFaculty] = useState<FacultyItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
   const [filterBatchId, setFilterBatchId] = useState("");
-  const [filterSectionId, setFilterSectionId] = useState("");
   const [filterSemester, setFilterSemester] = useState("");
 
   // Form
   const [showForm, setShowForm] = useState(false);
-  const [formSections, setFormSections] = useState<SectionItem[]>([]);
-  const [form, setForm] = useState({ batchId: "", sectionId: "", courseId: "", semester: "1", facultyId: "" });
+  const [form, setForm] = useState({ batchId: "", courseId: "", semester: "1", facultyId: "" });
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
 
@@ -100,12 +93,24 @@ export default function BatchCoursesPage() {
   const [importSubmitError, setImportSubmitError] = useState("");
   const [importLoading, setImportLoading] = useState(false);
 
+  const canCreateBatchCourse = modules?.batchCourses?.create === true;
+  const canDeleteBatchCourse = modules?.batchCourses?.delete === true;
+
+  useEffect(() => {
+    authFetch("/api/auth/permissions")
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.modules && typeof d.modules === "object") setModules(d.modules as ModulesMap);
+        else setModules(null);
+      })
+      .catch(() => setModules(null));
+  }, []);
+
   async function fetchBatchCourses() {
     setLoading(true);
     try {
       const p = new URLSearchParams();
       if (filterBatchId) p.set("batchId", filterBatchId);
-      if (filterSectionId) p.set("sectionId", filterSectionId);
       if (filterSemester) p.set("semester", filterSemester);
       const res = await authFetch(`/api/batch-courses?${p}`);
       const data = await res.json().catch(() => null);
@@ -122,34 +127,22 @@ export default function BatchCoursesPage() {
 
   useEffect(() => {
     authFetch("/api/batches").then(r => r.json()).then(d => setBatches(Array.isArray(d) ? d : []));
-    authFetch("/api/courses").then(r => r.json()).then(d => setCourses(Array.isArray(d) ? d : d.courses ?? []));
-    authFetch("/api/faculty").then(r => r.json()).then(d => setFaculty(Array.isArray(d) ? d : d.faculty ?? []));
   }, []);
 
-  // Fetch sections when filter batch changes
   useEffect(() => {
-    if (filterBatchId) {
-      authFetch(`/api/sections?batchId=${filterBatchId}`).then(r => r.json()).then(d => setSections(Array.isArray(d) ? d : []));
-    } else {
-      setSections([]);
+    if (!canCreateBatchCourse) {
+      setCourses([]);
+      setFaculty([]);
+      return;
     }
-    setFilterSectionId("");
-  }, [filterBatchId]);
+    authFetch("/api/courses").then(r => r.json()).then(d => setCourses(Array.isArray(d) ? d : d.courses ?? []));
+    authFetch("/api/faculty").then(r => r.json()).then(d => setFaculty(Array.isArray(d) ? d : d.faculty ?? []));
+  }, [canCreateBatchCourse]);
 
-  useEffect(() => { fetchBatchCourses(); }, [filterBatchId, filterSectionId, filterSemester]);
-
-  // Fetch sections for the form when form batch changes
-  useEffect(() => {
-    if (form.batchId) {
-      authFetch(`/api/sections?batchId=${form.batchId}`).then(r => r.json()).then(d => setFormSections(Array.isArray(d) ? d : []));
-    } else {
-      setFormSections([]);
-    }
-    setForm(f => ({ ...f, sectionId: "" }));
-  }, [form.batchId]);
+  useEffect(() => { fetchBatchCourses(); }, [filterBatchId, filterSemester]);
 
   async function openForm() {
-    setForm({ batchId: "", sectionId: "", courseId: "", semester: "1", facultyId: "" });
+    setForm({ batchId: "", courseId: "", semester: "1", facultyId: "" });
     setFormError("");
     setShowForm(true);
   }
@@ -161,7 +154,6 @@ export default function BatchCoursesPage() {
     try {
       const body: Record<string, unknown> = {
         batchId: form.batchId,
-        sectionId: form.sectionId,
         courseId: form.courseId,
         semester: Number(form.semester),
       };
@@ -197,15 +189,15 @@ export default function BatchCoursesPage() {
       for (const row of raw) {
         const parsed = batchCourseRowFromExcel(row);
         if (!parsed) continue;
-        const byId = parsed.batchId && parsed.sectionId;
-        const byName = parsed.batchName && parsed.sectionName;
+        const byId = parsed.batchId;
+        const byName = parsed.batchName;
         const courseOk = parsed.courseCode || parsed.courseId;
         if (!courseOk || !Number.isFinite(parsed.semester)) {
-          setImportParseError("Each row needs Course Code or Course ID, Semester, and batch/section (by ID pair or by name pair).");
+          setImportParseError("Each row needs Course Code or Course ID, Semester, and Batch (by ID or name).");
           return;
         }
         if (!byId && !byName) {
-          setImportParseError("Each row needs either (Batch ID + Section ID) or (Batch Name + Section Name).");
+          setImportParseError("Each row needs Batch ID or Batch Name.");
           return;
         }
         rows.push(parsed);
@@ -234,9 +226,7 @@ export default function BatchCoursesPage() {
         body: JSON.stringify({
           rows: importRows.map((r) => ({
             batchId: r.batchId || null,
-            sectionId: r.sectionId || null,
             batchName: r.batchName || null,
-            sectionName: r.sectionName || null,
             courseCode: r.courseCode || null,
             courseId: r.courseId || null,
             semester: r.semester,
@@ -260,33 +250,43 @@ export default function BatchCoursesPage() {
     }
   }
 
+  const showBatchCourseAdmin = canCreateBatchCourse;
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className={dash.pageTitle}>Batch Courses</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              downloadExcelTemplate("batch-courses-import-template.xlsx", "BatchCourses", [
-                "Batch Name",
-                "Section Name",
-                "S. code / Course code",
-                "Semester",
-                "Faculty Email",
-              ])
-            }
-            className={dash.btnSecondary}
-          >
-            Download Excel template
-          </button>
-          <button type="button" onClick={openImport} className={dash.btnSecondary}>
-            Import Excel
-          </button>
-          <button type="button" onClick={openForm} className={dash.btnPrimary}>
-            + Assign Course
-          </button>
+        <div>
+          <h1 className={dash.pageTitle}>{showBatchCourseAdmin ? "Batch Courses" : "My courses"}</h1>
+          {!showBatchCourseAdmin && (
+            <p className={`mt-1 max-w-xl text-xs ${dash.cellMuted}`}>
+              Batch and paper assignments where you are the assigned faculty. Contact academics office to change allocations.
+            </p>
+          )}
         </div>
+        {showBatchCourseAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                downloadExcelTemplate("batch-courses-import-template.xlsx", "BatchCourses", [
+                  "Batch Name",
+                  "S. code / Course code",
+                  "Semester",
+                  "Faculty Email",
+                ])
+              }
+              className={dash.btnSecondary}
+            >
+              Download Excel template
+            </button>
+            <button type="button" onClick={openImport} className={dash.btnSecondary}>
+              Import Excel
+            </button>
+            <button type="button" onClick={openForm} className={dash.btnPrimary}>
+              + Assign Course
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -298,16 +298,6 @@ export default function BatchCoursesPage() {
           <option value="">All Batches</option>
           {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
-        {filterBatchId && (
-          <select
-            value={filterSectionId}
-            onChange={e => setFilterSectionId(e.target.value)}
-            className={dash.select}
-          >
-            <option value="">All Sections</option>
-            {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        )}
         <select
           value={filterSemester}
           onChange={e => setFilterSemester(e.target.value)}
@@ -323,25 +313,21 @@ export default function BatchCoursesPage() {
           <thead className={dash.thead}>
             <tr>
               <th className={dash.th}>Batch</th>
-              <th className={dash.th}>Section</th>
               <th className={dash.th}>Course Code</th>
               <th className={dash.th}>Course Name</th>
               <th className={dash.th}>Semester</th>
               <th className={dash.th}>Faculty</th>
-              <th className={dash.th}>Actions</th>
+              {canDeleteBatchCourse ? <th className={dash.th}>Actions</th> : null}
             </tr>
           </thead>
           <tbody className={dash.tbodyDivide}>
             {loading ? (
-              <tr><td colSpan={7} className={dash.emptyCell}>Loading...</td></tr>
+              <tr><td colSpan={canDeleteBatchCourse ? 6 : 5} className={dash.emptyCell}>Loading...</td></tr>
             ) : batchCourses.length === 0 ? (
-              <tr><td colSpan={7} className={dash.emptyCell}>No batch courses found</td></tr>
+              <tr><td colSpan={canDeleteBatchCourse ? 6 : 5} className={dash.emptyCell}>No batch courses found</td></tr>
             ) : batchCourses.map(bc => (
               <tr key={bc.id} className={dash.rowHover}>
                 <td className={`px-4 py-3 ${dash.cellStrong}`}>{bc.batch?.name ?? "—"}</td>
-                <td className={`px-4 py-3 ${dash.cellMuted}`}>
-                  {bc.section?.name ? bc.section.name : <span className={dash.emDash}>&mdash;</span>}
-                </td>
                 <td className={`px-4 py-3 ${dash.cellMono}`}>{bc.course?.code ?? "—"}</td>
                 <td className={`px-4 py-3 ${dash.cellStrong}`}>{bc.course?.name ?? "—"}</td>
                 <td className={`px-4 py-3 ${dash.cellMuted}`}>Semester {bc.semester}</td>
@@ -350,18 +336,20 @@ export default function BatchCoursesPage() {
                     ? `${bc.faculty.user.firstName} ${bc.faculty.user.lastName}`
                     : <span className={dash.emDash}>&mdash;</span>}
                 </td>
-                <td className="px-4 py-3">
-                  <button type="button" onClick={() => handleDelete(bc)} className={dash.btnDanger}>
-                    Delete
-                  </button>
-                </td>
+                {canDeleteBatchCourse ? (
+                  <td className="px-4 py-3">
+                    <button type="button" onClick={() => handleDelete(bc)} className={dash.btnDanger}>
+                      Delete
+                    </button>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {showForm && (
+      {showBatchCourseAdmin && showForm && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-h-[90vh] max-w-lg overflow-y-auto`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Assign Course to Batch</h2>
@@ -377,19 +365,6 @@ export default function BatchCoursesPage() {
                 >
                   <option value="">Select batch</option>
                   {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={dash.label}>Section</label>
-                <select
-                  value={form.sectionId}
-                  onChange={e => setForm(f => ({ ...f, sectionId: e.target.value }))}
-                  required
-                  disabled={!form.batchId}
-                  className={dash.selectFullDisabled}
-                >
-                  <option value="">{form.batchId ? "Select section" : "Select a batch first"}</option>
-                  {formSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div>
@@ -449,13 +424,13 @@ export default function BatchCoursesPage() {
         </div>
       )}
 
-      {showImport && (
+      {showBatchCourseAdmin && showImport && (
         <div className={dash.modalOverlay}>
           <div className={`${dash.modalPanel} max-h-[90vh] max-w-lg overflow-y-auto`}>
             <h2 className={`${dash.sectionTitle} mb-4`}>Import batch courses</h2>
             <BulkImportOrderHint className="mb-3" />
             <p className={`mb-3 text-xs ${dash.cellMuted}`}>
-              Use <strong>Batch Name</strong> and <strong>Section Name</strong> as shown under Batches (or Batch ID + Section ID).{" "}
+              Use <strong>Batch Name</strong> as shown under Batches (or Batch ID).{" "}
               <strong>S. code / Course code</strong> accepts M.Sc(Aud)-style codes (e.g. <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">Aud 201M</code> → matches{" "}
               <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">AUD201M</code> in Courses). <strong>Faculty Email</strong> is optional.
             </p>

@@ -8,6 +8,7 @@ import {
   updateUserHandler,
   deactivateUserHandler,
   activateUserHandler,
+  changeUserRoleHandler,
 } from "./users.controller";
 
 const router = Router();
@@ -19,5 +20,6 @@ router.get("/:id", authorize(...USER_PROFILE_VIEWERS), getUserHandler);
 router.put("/:id", authorize(...LEADERSHIP_ROLES), updateUserHandler);
 router.patch("/:id/deactivate", authorize(...LEADERSHIP_ROLES), deactivateUserHandler);
 router.patch("/:id/activate", authorize(...LEADERSHIP_ROLES), activateUserHandler);
+router.patch("/:id/role", authorize(...LEADERSHIP_ROLES), changeUserRoleHandler);
 
 export default router;

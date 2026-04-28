@@ -6,14 +6,18 @@ import { dash } from "@/lib/dashboardUi";
 
 type Props = { onClose: () => void; onSuccess: () => void };
 
-const ROLES_NO_STUDENT = [
+const ROLE_OPTIONS = [
   { value: "ADMIN", label: "Administrator" },
   { value: "CMD", label: "CMD (Managing Director)" },
   { value: "PRINCIPAL", label: "Principal" },
-  { value: "STAFF", label: "Staff" },
-  { value: "OPERATIONS_LECTURER", label: "Operations — Lecturer" },
-  { value: "OPERATIONS_HR", label: "Operations — HR" },
-  { value: "OPERATIONS_FRONT_DESK", label: "Operations — Front desk" },
+  { value: "ASSISTANT_PROFESSOR", label: "Assistant Professor" },
+  { value: "PROFESSOR", label: "Professor" },
+  { value: "CLINICAL_STAFF", label: "Clinical Staff" },
+  { value: "GUEST_PROFESSOR", label: "Guest Professor" },
+  { value: "OPERATIONS", label: "Operations" },
+  { value: "ACCOUNTS", label: "Accounts" },
+  { value: "IT_STAFF", label: "IT Staff" },
+  { value: "STUDENT", label: "Student" },
   { value: "ALUMNI", label: "Alumni" },
   { value: "GUEST_STUDENT", label: "Guest student" },
 ] as const;
@@ -28,12 +32,13 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [role, setRole] = useState<string>("STAFF");
+  const [role, setRole] = useState<string>("ASSISTANT_PROFESSOR");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [designation, setDesignation] = useState("");
   const [qualification, setQualification] = useState("");
+  const [experience, setExperience] = useState("");
   const [departments, setDepartments] = useState<Dept[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,10 +63,16 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
         phone: phone.trim() || null,
       };
       if (password.trim().length >= 8) body.password = password.trim();
-      if (role === "OPERATIONS_LECTURER") {
+      if (
+        role === "ASSISTANT_PROFESSOR" ||
+        role === "PROFESSOR" ||
+        role === "CLINICAL_STAFF" ||
+        role === "GUEST_PROFESSOR"
+      ) {
         body.departmentId = departmentId;
         body.designation = designation.trim();
         if (qualification.trim()) body.qualification = qualification.trim();
+        if (experience.trim()) body.experience = experience.trim();
       }
       const res = await authFetch("/api/users", { method: "POST", body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
@@ -77,7 +88,11 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
     }
   }
 
-  const showLecturerFields = role === "OPERATIONS_LECTURER";
+  const showLecturerFields =
+    role === "ASSISTANT_PROFESSOR" ||
+    role === "PROFESSOR" ||
+    role === "CLINICAL_STAFF" ||
+    role === "GUEST_PROFESSOR";
 
   return (
     <div className={dash.modalOverlay}>
@@ -113,7 +128,7 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
           <div>
             <label className={dash.label}>Role</label>
             <select value={role} onChange={(e) => setRole(e.target.value)} className={dash.selectFull}>
-              {ROLES_NO_STUDENT.map((r) => (
+              {ROLE_OPTIONS.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>
@@ -145,6 +160,10 @@ export default function CreateUserModal({ onClose, onSuccess }: Props) {
               <div>
                 <label className={dash.label}>Qualification (optional)</label>
                 <input value={qualification} onChange={(e) => setQualification(e.target.value)} className={dash.input} />
+              </div>
+              <div>
+                <label className={dash.label}>Experience (optional)</label>
+                <input value={experience} onChange={(e) => setExperience(e.target.value)} className={dash.input} />
               </div>
             </>
           )}

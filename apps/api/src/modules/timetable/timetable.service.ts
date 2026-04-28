@@ -5,7 +5,6 @@ const timetableInclude = {
   batchCourse: {
     include: {
       batch: { select: { name: true } },
-      section: { select: { name: true } },
       course: { select: { name: true, code: true } },
       faculty: { include: { user: { select: { firstName: true, lastName: true } } } },
     },
@@ -28,7 +27,10 @@ export function timetableDayLabel(d = new Date()): string {
 }
 
 export async function listTodaysSlotsForStudent(tenantId: string, studentId: string, refDate = new Date()) {
-  const student = await prisma.student.findFirst({ where: { id: studentId, tenantId } });
+  const student = await prisma.student.findFirst({
+    where: { id: studentId, tenantId },
+    select: { id: true, batchId: true },
+  });
   if (!student) throw new Error("Student not found");
 
   const dow = timetableDayFromDate(refDate);
@@ -37,7 +39,7 @@ export async function listTodaysSlotsForStudent(tenantId: string, studentId: str
   }
 
   const batchCourses = await prisma.batchCourse.findMany({
-    where: { tenantId, sectionId: student.sectionId },
+    where: { tenantId, batchId: student.batchId },
     select: { id: true },
   });
   const ids = batchCourses.map((b: { id: string }) => b.id);
@@ -71,13 +73,20 @@ export async function listTodaysSlotsForFaculty(tenantId: string, facultyId: str
 
 export async function listTimetable(
   tenantId: string,
-  filters: { batchId?: string; batchCourseId?: string }
+  filters: { batchId?: string; batchCourseId?: string; facultyId?: string }
 ) {
   return prisma.timetable.findMany({
     where: {
       tenantId,
       ...(filters.batchCourseId ? { batchCourseId: filters.batchCourseId } : {}),
-      ...(filters.batchId ? { batchCourse: { batchId: filters.batchId } } : {}),
+      ...(filters.batchId || filters.facultyId
+        ? {
+            batchCourse: {
+              ...(filters.batchId ? { batchId: filters.batchId } : {}),
+              ...(filters.facultyId ? { facultyId: filters.facultyId } : {}),
+            },
+          }
+        : {}),
     },
     include: timetableInclude,
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],

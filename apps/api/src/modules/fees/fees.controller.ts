@@ -7,6 +7,8 @@ const feeStructureSchema = z.object({
   name: z.string().min(1),
   amount: z.number().positive(),
   dueDate: z.string(),
+  batchId: z.string().optional().nullable(),
+  sectionId: z.string().optional().nullable(),
   isRecurring: z.boolean().optional(),
   isAdmissionFee: z.boolean().optional(),
 });
@@ -15,6 +17,8 @@ const feeStructureUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   amount: z.number().positive().optional(),
   dueDate: z.string().optional(),
+  batchId: z.string().optional().nullable(),
+  sectionId: z.string().optional().nullable(),
   isRecurring: z.boolean().optional(),
   isAdmissionFee: z.boolean().optional(),
 });
@@ -32,6 +36,7 @@ const paymentCreateSchema = z
 const paymentStatusSchema = z.object({
   status: z.enum(["PENDING", "PAID", "FAILED", "REFUNDED"]),
   paidAt: z.string().optional(),
+  paidAmount: z.number().positive().optional(),
 });
 
 export async function listStructuresHandler(req: Request, res: Response): Promise<void> {
@@ -75,7 +80,7 @@ export async function listPaymentsHandler(req: Request, res: Response): Promise<
   try {
     const { studentId, feeStructureId, status } = req.query as Record<string, string | undefined>;
     const restrictToStudentUserId =
-      req.user!.role === Role.PRESENT_STUDENT || req.user!.role === Role.GUEST_STUDENT || req.user!.role === Role.ALUMNI
+      req.user!.role === Role.STUDENT || req.user!.role === Role.GUEST_STUDENT || req.user!.role === Role.ALUMNI
         ? req.user!.id
         : undefined;
     res.json(
@@ -108,7 +113,15 @@ export async function updatePaymentStatusHandler(req: Request, res: Response): P
   const r = paymentStatusSchema.safeParse(req.body);
   if (!r.success) { res.status(400).json({ error: r.error.flatten() }); return; }
   try {
-    res.json(await svc.updatePaymentStatus(req.tenant.id, String(req.params.id), r.data.status as PaymentStatus, r.data.paidAt));
+    res.json(
+      await svc.updatePaymentStatus(
+        req.tenant.id,
+        String(req.params.id),
+        r.data.status as PaymentStatus,
+        r.data.paidAt,
+        r.data.paidAmount
+      )
+    );
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : "Failed" });
   }
