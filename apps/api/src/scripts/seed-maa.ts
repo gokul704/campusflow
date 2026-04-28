@@ -21,6 +21,7 @@ import {
   printTenantSlugResolutionFailure,
   resolveTenantSlugForSeed,
 } from "./resolveTenantSlugForSeed";
+import { resolveSeedDemoPassword } from "./seedDemoPassword";
 
 function parseArgs(): Record<string, string> {
   const args: Record<string, string> = {};
@@ -102,7 +103,7 @@ async function main() {
     process.exit(1);
   }
 
-  const password = args["password"] ?? "MaaDemo@2026";
+  const password = resolveSeedDemoPassword(args["password"]);
 
   console.log(`\n🌱 MAA Institute seed (slug=${slug})\n`);
 

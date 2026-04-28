@@ -4,7 +4,11 @@
  *
  * Usage:
  *   npm run api:seed:data -- --slug=mish
+ *   npm run api:seed:data -- --slug=mish --password=YourDemoPass123
  *   npm run api:seed:data   (uses SINGLE_TENANT_SLUG or the only tenant in DB)
+ *
+ * Sample faculty/student passwords: `resolveSeedDemoPassword` (default CampusFlowDemo@2026,
+ * or SEED_DEMO_PASSWORD in .env, or --password=...).
  *
  * `npm run seed:data` runs `db:deploy` first so the database matches the Prisma schema
  * (e.g. `users.dateOfBirth`). Use NODE_ENV=production to skip verbose Prisma query logs.
@@ -17,9 +21,14 @@ import {
   printTenantSlugResolutionFailure,
   resolveTenantSlugForSeed,
 } from "./resolveTenantSlugForSeed";
+import { resolveSeedDemoPassword } from "./seedDemoPassword";
 
 function slugFromArgv(): string | undefined {
   return process.argv.find((a) => a.startsWith("--slug="))?.split("=")[1]?.trim();
+}
+
+function passwordFromArgv(): string | undefined {
+  return process.argv.find((a) => a.startsWith("--password="))?.split("=")[1]?.trim();
 }
 
 async function main() {
@@ -47,6 +56,9 @@ Usage (tenant must already exist — run npm run api:seed first):
   }
 
   console.log(`\n🌱 Seeding data for: ${tenant.name}\n`);
+
+  const demoPassword = resolveSeedDemoPassword(passwordFromArgv());
+  const demoPasswordHash = await bcrypt.hash(demoPassword, 12);
 
   // ── 1. Departments ──────────────────────────────────────────
   const deptData = [
@@ -159,7 +171,6 @@ Usage (tenant must already exist — run npm run api:seed first):
     { email: "anitha.mech@mish.edu", firstName: "Anitha",  lastName: "Rao",     deptCode: "MECH", designation: "Professor",           qualification: "PhD",     phone: "+919876543204", dateOfBirth: new Date("1976-09-01") },
   ];
 
-  const hashed = await bcrypt.hash("Faculty@123", 12);
   const facultyIds: Record<string, string> = {};
 
   for (const f of facultyData) {
@@ -170,7 +181,7 @@ Usage (tenant must already exist — run npm run api:seed first):
       data: {
         tenantId: tenant.id,
         email: f.email,
-        password: hashed,
+        password: demoPasswordHash,
         firstName: f.firstName,
         lastName: f.lastName,
         role: Role.ASSISTANT_PROFESSOR,
@@ -180,7 +191,13 @@ Usage (tenant must already exist — run npm run api:seed first):
     });
     await prisma.user.update({
       where: { id: user.id },
-      data: { firstName: f.firstName, lastName: f.lastName, phone: f.phone, dateOfBirth: f.dateOfBirth },
+      data: {
+        firstName: f.firstName,
+        lastName: f.lastName,
+        phone: f.phone,
+        dateOfBirth: f.dateOfBirth,
+        password: demoPasswordHash,
+      },
     });
     let profile = await prisma.faculty.findUnique({ where: { userId: user.id } });
     if (!profile) {
@@ -206,7 +223,6 @@ Usage (tenant must already exist — run npm run api:seed first):
     { email: "student5@mish.edu", firstName: "Eshan",   lastName: "Mehta",   rollNumber: "CSE24005", section: sectionB, phone: "+919811122305", dateOfBirth: new Date("2006-02-18") },
   ];
 
-  const studentHashed = await bcrypt.hash("Student@123", 12);
   const studentIds: string[] = [];
   const sectionAStudents: string[] = [];
   const sectionBStudents: string[] = [];
@@ -219,7 +235,7 @@ Usage (tenant must already exist — run npm run api:seed first):
       data: {
         tenantId: tenant.id,
         email: s.email,
-        password: studentHashed,
+        password: demoPasswordHash,
         firstName: s.firstName,
         lastName: s.lastName,
         role: Role.STUDENT,
@@ -229,7 +245,13 @@ Usage (tenant must already exist — run npm run api:seed first):
     });
     await prisma.user.update({
       where: { id: user.id },
-      data: { firstName: s.firstName, lastName: s.lastName, phone: s.phone, dateOfBirth: s.dateOfBirth },
+      data: {
+        firstName: s.firstName,
+        lastName: s.lastName,
+        phone: s.phone,
+        dateOfBirth: s.dateOfBirth,
+        password: demoPasswordHash,
+      },
     });
     let profile = await prisma.student.findUnique({ where: { userId: user.id } });
     if (!profile) {
@@ -526,8 +548,8 @@ Usage (tenant must already exist — run npm run api:seed first):
   Students in Section A: ${sectionAStudents.length} (CSE24001-003)
   Students in Section B: ${sectionBStudents.length} (CSE24004-005)
 
-  Faculty login:  ramesh.cse@mish.edu / Faculty@123
-  Student login:  student1@mish.edu   / Student@123
+  Sample logins (same password for faculty + students below):
+    ramesh.cse@mish.edu, student1@mish.edu, …  /  ${demoPassword}
 ─────────────────────────────────────────
   `);
 }

@@ -8,22 +8,11 @@
  *
  * Requires `npm run seed` (or an existing tenant) first.
  *
- * Emails (replace {slug} with your tenant slug, e.g. mish):
- *   {slug}.admin-portal@roles.demo
- *   {slug}.cmd@roles.demo
- *   {slug}.principal@roles.demo
- *   {slug}.staff@roles.demo
- *   {slug}.lecturer@roles.demo
- *   {slug}.hr@roles.demo
- *   {slug}.frontdesk@roles.demo
- *   {slug}.student@roles.demo
- *   {slug}.alumni@roles.demo
- *   {slug}.guest@roles.demo
+ * Emails: `{slug}.{key}@roles.demo` — see ROLE_ROWS in this file for keys (admin-portal, cmd, …).
+ * `roles.demo` is not a real mailbox — demo login only.
  *
- * `roles.demo` is not a real mailbox — it is only for login in this app.
- *
- * Password: one shared password for ALL of these users (default below). Override
- * with --password=...  Change in production after demos.
+ * Password: one shared value for ALL accounts — see `resolveSeedDemoPassword` in `seedDemoPassword.ts`
+ *   (default `CampusFlowDemo@2026`, or `SEED_DEMO_PASSWORD` in .env, or `--password=...`).
  *
  * Guest student accounts are seeded like other users; workshop/library limits
  * are enforced in API routes when you add GUEST_STUDENT checks.
@@ -36,6 +25,7 @@ import {
   printTenantSlugResolutionFailure,
   resolveTenantSlugForSeed,
 } from "./resolveTenantSlugForSeed";
+import { resolveSeedDemoPassword } from "./seedDemoPassword";
 
 function parseArgs(): Record<string, string> {
   const args: Record<string, string> = {};
@@ -76,13 +66,14 @@ const ROLE_ROWS: Row[] = [
 async function main() {
   const args = parseArgs();
   const slug = await resolveTenantSlugForSeed(args["slug"]);
-  const password = args["password"] ?? "RoleDemo@2026";
+  const password = resolveSeedDemoPassword(args["password"]);
 
   if (!slug) {
     console.error(`
 Usage:
   npm run api:seed:roles -- --slug=mish
   npm run api:seed:roles -- --slug=mish --password=YourDemoPass123
+  (or set SEED_DEMO_PASSWORD in .env — see seedDemoPassword.ts)
   npm run api:seed:roles   (with SINGLE_TENANT_SLUG in .env, or exactly one tenant in DB)
 
   Or: npm run seed:roles --workspace=@campusflow/api -- --slug=mish

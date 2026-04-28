@@ -29,7 +29,7 @@
   });
 })();
 
-// ========== LANGUAGES: English | Hindi | Geo local ==========
+// ========== LANGUAGES: English (international) | Hindi (national) | Geo regional (state / browser) ==========
 const STORAGE_LANG_CHOICE = 'mish_lang_choice';
 const STORAGE_GEO_META = 'mish_geo_meta';
 
@@ -148,7 +148,7 @@ function textForElement(el) {
 }
 
 function applyLanguage() {
-  document.querySelectorAll('[data-en]').forEach((el) => {
+  document.querySelectorAll('[data-en]:not([data-skip-lang-apply])').forEach((el) => {
     const val = textForElement(el);
     if (val == null || val === '') return;
     const tag = el.tagName;
@@ -167,7 +167,7 @@ function applyLanguage() {
     }
     el.textContent = val;
   });
-  document.querySelectorAll('[data-en-placeholder]').forEach((el) => {
+  document.querySelectorAll('[data-en-placeholder]:not([data-skip-lang-apply])').forEach((el) => {
     let ph;
     if (currentLangMode === 'en') ph = el.getAttribute('data-en-placeholder');
     else if (currentLangMode === 'hi') ph = el.getAttribute('data-hi-placeholder') || el.getAttribute('data-en-placeholder');
@@ -180,6 +180,26 @@ function applyLanguage() {
   });
   const code = currentLangMode === 'local' ? mishLocalCode : currentLangMode === 'hi' ? 'hi' : 'en';
   document.documentElement.lang = code === 'en' ? 'en' : code;
+
+  const hint = document.getElementById('langPickerHint');
+  if (hint) {
+    const enH = hint.getAttribute('data-en') || '';
+    const hiH = hint.getAttribute('data-hi') || enH;
+    if (currentLangMode === 'en') {
+      hint.textContent = enH;
+    } else if (currentLangMode === 'hi') {
+      hint.textContent = hiH;
+    } else {
+      const geo = typeof window !== 'undefined' ? window.__mishGeoMeta : null;
+      const nat = geo && geo.labelNative ? geo.labelNative : String(mishLocalCode || 'en').toUpperCase();
+      const eng = geo && geo.labelEn ? geo.labelEn : String(mishLocalCode || '');
+      hint.textContent =
+        'Regional: ' +
+        nat +
+        (eng && eng !== nat ? ' (' + eng + ')' : '') +
+        ' — page text uses local language where translations exist; switch above for full English or Hindi.';
+    }
+  }
 }
 
 function readStoredGeoMeta() {
@@ -203,12 +223,12 @@ function updateLocalLanguageOption(meta) {
   if (!opt) return;
   const code = (meta.code || 'en').toLowerCase();
   if (code === 'en') {
-    opt.textContent = 'Local — English';
+    opt.textContent = 'Regional — English (your area)';
     return;
   }
   const native = meta.labelNative || meta.code;
   const en = meta.labelEn || meta.code;
-  opt.textContent = native + ' (' + en + ')';
+  opt.textContent = native + ' (' + en + ') — regional / local';
 }
 
 async function initMishLanguages() {

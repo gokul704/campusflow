@@ -4,6 +4,7 @@
  *
  * New institute (tenant row does not exist yet):
  *   npm run api:seed -- --slug=mish --name="MISH College" --email=admin@mish.edu --password=YourPassword123
+ *   Tip: use the same password as `SEED_DEMO_PASSWORD` / `seedDemoPassword.ts` default so admin matches `api:seed:data` & `api:seed:roles` users.
  *   Slug may be omitted if SINGLE_TENANT_SLUG is set (or exactly one tenant exists — rare for empty DB).
  *
  * Existing institute only (no new tenant, no new admin unless missing):

@@ -137,7 +137,22 @@ section[id]:not(#home),
 }
 .lang-picker-wrap {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: min(280px, 100%);
+}
+.lang-picker-hint {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #475569;
+  text-align: right;
+  max-width: 260px;
+}
+@media (max-width: 768px) {
+  .lang-picker-hint { font-size: 0.6rem; max-width: 200px; }
 }
 .lang-select {
   appearance: none;

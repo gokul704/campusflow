@@ -73,11 +73,12 @@
       </div>
       <div class="lang-picker-wrap">
         <label for="langSelect" class="visually-hidden" data-en="Choose language" data-hi="भाषा चुनें">Choose language</label>
-        <select id="langSelect" class="lang-select" aria-label="Choose language">
-          <option value="en" selected>English</option>
-          <option value="hi">हिंदी (Hindi)</option>
-          <option value="local" id="langSelectLocalOpt">Regional…</option>
+        <select id="langSelect" class="lang-select" aria-label="Choose language: English, Hindi, or regional">
+          <option value="en" selected>English — international</option>
+          <option value="hi">हिंदी — Hindi (national)</option>
+          <option value="local" id="langSelectLocalOpt">Regional — by your location…</option>
         </select>
+        <p id="langPickerHint" class="lang-picker-hint" data-skip-lang-apply="1" data-en="International English, national Hindi, or the regional language matched to your state or browser (change anytime)." data-hi="अंतर्राष्ट्रीय अंग्रेज़ी, राष्ट्रीय हिंदी, या आपके राज्य/ब्राउज़र के अनुसार क्षेत्रीय भाषा — कभी भी बदल सकते हैं।">International English, national Hindi, or the regional language matched to your state or browser (change anytime).</p>
       </div>
       <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">
         <i class="fas fa-bars"></i>
