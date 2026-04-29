@@ -94,14 +94,13 @@ export async function tenantResolver(
     }
 
     if (!tenant) {
-      const candidates = await prisma.tenant.findMany({
-        take: 2,
+      // Single-institute default: if no explicit tenant signal is provided,
+      // fall back to the first active tenant so clients don't need tenant headers.
+      tenant = await prisma.tenant.findFirst({
+        where: { isActive: true },
         orderBy: { createdAt: "asc" },
         select: tenantSelect,
       });
-      if (candidates.length === 1) {
-        tenant = candidates[0]!;
-      }
     }
 
     if (!tenant) {
