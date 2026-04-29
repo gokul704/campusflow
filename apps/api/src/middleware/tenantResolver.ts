@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { prisma } from "@campusflow/db";
+import { prisma, Prisma } from "@campusflow/db";
 
 const tenantSelect = {
   id: true,
@@ -19,6 +19,25 @@ type TenantRow = {
   accessMatrix?: unknown | null;
 };
 
+const tenantSelectSql = Prisma.sql`
+  id,
+  slug,
+  name,
+  plan::text as plan,
+  "isActive",
+  "accessMatrix"
+`;
+
+async function queryTenantRaw(where: Prisma.Sql): Promise<TenantRow | null> {
+  const rows = await prisma.$queryRaw<TenantRow[]>(Prisma.sql`
+    SELECT ${tenantSelectSql}
+    FROM "tenants"
+    WHERE ${where}
+    LIMIT 1
+  `);
+  return rows[0] ?? null;
+}
+
 /**
  * Resolves the active institute (tenant) for this request.
  *
@@ -37,13 +56,21 @@ export async function tenantResolver(
 ): Promise<void> {
   try {
     let tenant: TenantRow | null = null;
+    const tenantModel = (prisma as unknown as {
+      tenant?: {
+        findUnique: (args: unknown) => Promise<TenantRow | null>;
+        findFirst: (args: unknown) => Promise<TenantRow | null>;
+      };
+    }).tenant;
 
     const tenantKey = req.headers["x-tenant-key"];
     if (tenantKey && typeof tenantKey === "string") {
-      tenant = await prisma.tenant.findUnique({
-        where: { publicKey: tenantKey },
-        select: tenantSelect,
-      });
+      tenant = tenantModel
+        ? await tenantModel.findUnique({
+            where: { publicKey: tenantKey },
+            select: tenantSelect,
+          })
+        : await queryTenantRaw(Prisma.sql`"publicKey" = ${tenantKey}`);
     }
 
     if (!tenant) {
@@ -53,20 +80,24 @@ export async function tenantResolver(
         const parts = host.split(".");
         if (parts.length >= 3 && parts[0] && parts[0] !== "www") {
           const slug = parts[0];
-          tenant = await prisma.tenant.findUnique({
-            where: { slug },
-            select: tenantSelect,
-          });
+          tenant = tenantModel
+            ? await tenantModel.findUnique({
+                where: { slug },
+                select: tenantSelect,
+              })
+            : await queryTenantRaw(Prisma.sql`slug = ${slug}`);
         }
       }
     }
 
     const slugEnv = process.env.SINGLE_TENANT_SLUG?.trim();
     if (!tenant && slugEnv) {
-      const bySlug = await prisma.tenant.findUnique({
-        where: { slug: slugEnv },
-        select: tenantSelect,
-      });
+      const bySlug = tenantModel
+        ? await tenantModel.findUnique({
+            where: { slug: slugEnv },
+            select: tenantSelect,
+          })
+        : await queryTenantRaw(Prisma.sql`slug = ${slugEnv}`);
       if (!bySlug) {
         res.status(400).json({
           error: "Unable to identify tenant",
@@ -79,10 +110,12 @@ export async function tenantResolver(
 
     const idEnv = process.env.SINGLE_TENANT_ID?.trim();
     if (!tenant && idEnv) {
-      const byId = await prisma.tenant.findUnique({
-        where: { id: idEnv },
-        select: tenantSelect,
-      });
+      const byId = tenantModel
+        ? await tenantModel.findUnique({
+            where: { id: idEnv },
+            select: tenantSelect,
+          })
+        : await queryTenantRaw(Prisma.sql`id = ${idEnv}`);
       if (!byId) {
         res.status(400).json({
           error: "Unable to identify tenant",
@@ -96,11 +129,13 @@ export async function tenantResolver(
     if (!tenant) {
       // Single-institute default: if no explicit tenant signal is provided,
       // fall back to the first active tenant so clients don't need tenant headers.
-      tenant = await prisma.tenant.findFirst({
-        where: { isActive: true },
-        orderBy: { createdAt: "asc" },
-        select: tenantSelect,
-      });
+      tenant = tenantModel
+        ? await tenantModel.findFirst({
+            where: { isActive: true },
+            orderBy: { createdAt: "asc" },
+            select: tenantSelect,
+          })
+        : await queryTenantRaw(Prisma.sql`"isActive" = true`);
     }
 
     if (!tenant) {
