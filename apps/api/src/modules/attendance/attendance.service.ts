@@ -70,7 +70,6 @@ export async function getAttendanceSummary(tenantId: string, batchCourseId: stri
       student: {
         include: {
           user: { select: { firstName: true, lastName: true } },
-          section: { select: { name: true } },
         },
       },
     },

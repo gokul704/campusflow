@@ -11,21 +11,22 @@ export type BatchSectionInput = {
 export async function resolveBatchAndSectionIds(
   tenantId: string,
   opts: BatchSectionInput
-): Promise<{ batchId: string; sectionId: string }> {
+): Promise<{ batchId: string; sectionId?: string }> {
   const bid = opts.batchId?.trim();
   const sid = opts.sectionId?.trim();
   const bn = opts.batchName?.trim();
   const sn = opts.sectionName?.trim();
 
   if (bid && sid) {
-    const section = await prisma.section.findFirst({
-      where: { id: sid, tenantId, batchId: bid },
+    const batch = await prisma.batch.findFirst({
+      where: { id: bid, tenantId },
+      select: { id: true },
     });
-    if (!section) throw new Error("Section not found for this batch (check batch ID and section ID).");
+    if (!batch) throw new Error("Batch not found (check batch ID).");
     return { batchId: bid, sectionId: sid };
   }
 
-  if (bn && sn) {
+  if (bn) {
     const batches = await prisma.batch.findMany({
       where: { tenantId, name: { equals: bn, mode: "insensitive" } },
       select: { id: true, name: true },
@@ -33,30 +34,14 @@ export async function resolveBatchAndSectionIds(
     if (batches.length === 0) throw new Error(`Batch not found: "${bn}"`);
     if (batches.length > 1) {
       throw new Error(
-        `Multiple batches match "${bn}". Rename them to be unique in this institute, or use batch ID + section ID.`
+        `Multiple batches match "${bn}". Rename them to be unique in this institute, or use batch ID.`
       );
     }
     const batch = batches[0]!;
-    const sections = await prisma.section.findMany({
-      where: {
-        tenantId,
-        batchId: batch.id,
-        name: { equals: sn, mode: "insensitive" },
-      },
-      select: { id: true, name: true },
-    });
-    if (sections.length === 0) {
-      throw new Error(`Section "${sn}" not found in batch "${bn}".`);
-    }
-    if (sections.length > 1) {
-      throw new Error(
-        `Multiple sections named "${sn}" in batch "${bn}". Rename sections to be unique within the batch, or use IDs.`
-      );
-    }
-    return { batchId: batch.id, sectionId: sections[0]!.id };
+    return { batchId: batch.id, sectionId: sn || undefined };
   }
 
-  throw new Error("Provide batchName and sectionName, or batchId and sectionId.");
+  throw new Error("Provide batchName or batchId.");
 }
 
 export type DepartmentLookupInput = {
@@ -109,7 +94,7 @@ export async function resolveBatchCourseCreateIds(
     facultyId?: string | null;
     facultyEmail?: string | null;
   }
-): Promise<{ batchId: string; sectionId: string; courseId: string; semester: number; facultyId?: string }> {
+): Promise<{ batchId: string; sectionId?: string; courseId: string; semester: number; facultyId?: string }> {
   if (row.batchCourseId?.trim()) {
     const bc = await prisma.batchCourse.findFirst({
       where: { id: row.batchCourseId.trim(), tenantId },
@@ -118,7 +103,7 @@ export async function resolveBatchCourseCreateIds(
     if (!bc) throw new Error("Batch course not found");
     return {
       batchId: bc.batchId,
-      sectionId: bc.sectionId,
+      sectionId: bc.sectionId ?? undefined,
       courseId: bc.courseId,
       semester: bc.semester,
       facultyId: bc.facultyId ?? undefined,
@@ -177,7 +162,7 @@ export async function resolveBatchCourseId(
     where: {
       tenantId,
       batchId: ids.batchId,
-      sectionId: ids.sectionId,
+      ...(ids.sectionId ? { sectionId: ids.sectionId } : {}),
       courseId: ids.courseId,
       semester: ids.semester,
     },

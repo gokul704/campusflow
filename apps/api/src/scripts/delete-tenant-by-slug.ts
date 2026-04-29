@@ -48,7 +48,6 @@ async function main() {
       await tx.faculty.deleteMany({ where: { tenantId: tid } });
       await tx.user.deleteMany({ where: { tenantId: tid } });
       await tx.course.deleteMany({ where: { tenantId: tid } });
-      await tx.section.deleteMany({ where: { tenantId: tid } });
       await tx.batch.deleteMany({ where: { tenantId: tid } });
       await tx.feeStructure.deleteMany({ where: { tenantId: tid } });
       await tx.department.deleteMany({ where: { tenantId: tid } });

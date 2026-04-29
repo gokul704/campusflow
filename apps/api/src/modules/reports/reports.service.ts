@@ -518,13 +518,12 @@ export async function exportTimetableCsv(tenantId: string, batchCourseId?: strin
         include: {
           course: { select: { name: true, code: true } },
           batch: { select: { name: true } },
-          section: { select: { name: true } },
         },
       },
     },
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
   });
-  const header = ["dayOfWeek", "start", "end", "room", "batch", "section", "course", "code"];
+  const header = ["dayOfWeek", "start", "end", "room", "batch", "course", "code"];
   const lines = [csvRow(header)];
   for (const r of rows) {
     lines.push(
@@ -534,7 +533,6 @@ export async function exportTimetableCsv(tenantId: string, batchCourseId?: strin
         r.endTime,
         r.room ?? "",
         r.batchCourse.batch.name,
-        r.batchCourse.section.name,
         r.batchCourse.course.name,
         r.batchCourse.course.code,
       ])

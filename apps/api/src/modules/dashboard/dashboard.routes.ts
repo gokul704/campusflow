@@ -46,7 +46,6 @@ router.get(
       totalDepartments,
       totalCourses,
       totalBatches,
-      totalSections,
       feeCollectedThisMonth,
       pendingFeesCount,
       pendingFeesAmountAgg,
@@ -58,7 +57,6 @@ router.get(
       prisma.department.count({ where: { tenantId } }),
       prisma.course.count({ where: { tenantId } }),
       prisma.batch.count({ where: { tenantId } }),
-      prisma.section.count({ where: { tenantId } }),
       prisma.feePayment.aggregate({
         where: { tenantId, status: "PAID", paidAt: { gte: monthStart, lte: monthEnd } },
         _sum: { amount: true },
@@ -78,7 +76,6 @@ router.get(
       totalDepartments,
       totalCourses,
       totalBatches,
-      totalSections,
       feeCollectedThisMonth: feeCollectedThisMonth._sum?.amount ?? 0,
       pendingFeesCount,
       pendingFeesAmount: pendingFeesAmountAgg._sum?.amount ?? 0,
@@ -191,7 +188,6 @@ router.get(
           select: {
             course: { select: { name: true } },
             batch: { select: { name: true } },
-            section: { select: { name: true } },
           },
         },
       },

@@ -1,24 +1,38 @@
 import { prisma } from "@campusflow/db";
 
 export async function listSections(tenantId: string, batchId?: string) {
-  return prisma.section.findMany({
-    where: { tenantId, ...(batchId ? { batchId } : {}) },
-    include: { batch: { select: { name: true } }, _count: { select: { students: true } } },
-    orderBy: [{ batch: { startYear: "desc" } }, { name: "asc" }],
+  const rows = await prisma.student.groupBy({
+    by: ["sectionId", "batchId"],
+    where: {
+      tenantId,
+      sectionId: { not: null },
+      ...(batchId ? { batchId } : {}),
+    },
+    _count: { _all: true },
+    orderBy: [{ batchId: "asc" }, { sectionId: "asc" }],
   });
+  return rows.map((row) => ({
+    id: row.sectionId,
+    name: row.sectionId,
+    batchId: row.batchId,
+    _count: { students: row._count._all },
+  }));
 }
 
 export async function createSection(tenantId: string, batchId: string, name: string) {
-  return prisma.section.create({
-    data: { tenantId, batchId, name: name.toUpperCase() },
-    include: { batch: { select: { name: true } }, _count: { select: { students: true } } },
-  });
+  const batch = await prisma.batch.findFirst({ where: { id: batchId, tenantId }, select: { id: true } });
+  if (!batch) throw new Error("Batch not found");
+  return {
+    id: name.toUpperCase(),
+    name: name.toUpperCase(),
+    batchId,
+    _count: { students: 0 },
+    message: "Section records are legacy-only; this endpoint returns a placeholder without persisting.",
+  };
 }
 
 export async function deleteSection(tenantId: string, id: string) {
-  const section = await prisma.section.findFirst({ where: { id, tenantId } });
-  if (!section) throw new Error("Section not found");
-  const count = await prisma.student.count({ where: { sectionId: id } });
+  const count = await prisma.student.count({ where: { tenantId, sectionId: id } });
   if (count > 0) throw new Error(`Cannot delete — ${count} students assigned`);
-  return prisma.section.delete({ where: { id } });
+  return { message: "No section model exists in current schema; nothing to delete." };
 }

@@ -142,12 +142,8 @@ async function main() {
       data: { tenantId: tid, name: batchName, startYear: 2025, endYear: 2027, isActive: true },
     });
   }
-  const secI =
-    (await prisma.section.findUnique({ where: { batchId_name: { batchId: batch.id, name: "Batch I" } } })) ??
-    (await prisma.section.create({ data: { tenantId: tid, batchId: batch.id, name: "Batch I" } }));
-  const secII =
-    (await prisma.section.findUnique({ where: { batchId_name: { batchId: batch.id, name: "Batch II" } } })) ??
-    (await prisma.section.create({ data: { tenantId: tid, batchId: batch.id, name: "Batch II" } }));
+  const secI = { id: "Batch I" };
+  const secII = { id: "Batch II" };
   console.log(`  ✅ Batch ${batchName} + sections Batch I, Batch II`);
 
   // ── M.Sc(Aud) Sem II courses ─────────────────────────────────
@@ -259,8 +255,8 @@ async function main() {
   for (const { code, facultyEmail } of links) {
     const bc = await prisma.batchCourse.upsert({
       where: {
-        sectionId_courseId_semester: {
-          sectionId: secI.id,
+        batchId_courseId_semester: {
+          batchId: batch.id,
           courseId: courseIds[code]!,
           semester,
         },
@@ -281,7 +277,7 @@ async function main() {
 
   // ── Timetable (Mon / Fri lecture blocks from sample) ────────
   const aud201 = await prisma.batchCourse.findFirst({
-    where: { tenantId: tid, sectionId: secI.id, courseId: courseIds["AUD201M"]!, semester },
+    where: { tenantId: tid, batchId: batch.id, sectionId: secI.id, courseId: courseIds["AUD201M"]!, semester },
   });
   if (aud201) {
     const slots = [

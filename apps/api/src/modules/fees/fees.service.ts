@@ -5,7 +5,6 @@ export async function listFeeStructures(tenantId: string) {
     where: { tenantId },
     include: {
       batch: { select: { id: true, name: true } },
-      section: { select: { id: true, name: true } },
       _count: { select: { payments: true } },
     },
     orderBy: { dueDate: "asc" },
@@ -27,16 +26,7 @@ export async function createFeeStructure(
   if (data.sectionId && !data.batchId) {
     throw new Error("Batch is required when section is selected");
   }
-  if (data.sectionId) {
-    const sec = await prisma.section.findFirst({
-      where: { id: data.sectionId, tenantId },
-      select: { id: true, batchId: true },
-    });
-    if (!sec) throw new Error("Section not found");
-    if (sec.batchId !== data.batchId) {
-      throw new Error("Selected section does not belong to selected batch");
-    }
-  } else if (data.batchId) {
+  if (data.batchId) {
     const batch = await prisma.batch.findFirst({ where: { id: data.batchId, tenantId }, select: { id: true } });
     if (!batch) throw new Error("Batch not found");
   }
@@ -75,16 +65,7 @@ export async function updateFeeStructure(
   if (nextSectionId && !nextBatchId) {
     throw new Error("Batch is required when section is selected");
   }
-  if (nextSectionId) {
-    const sec = await prisma.section.findFirst({
-      where: { id: nextSectionId, tenantId },
-      select: { id: true, batchId: true },
-    });
-    if (!sec) throw new Error("Section not found");
-    if (sec.batchId !== nextBatchId) {
-      throw new Error("Selected section does not belong to selected batch");
-    }
-  } else if (nextBatchId) {
+  if (nextBatchId) {
     const batch = await prisma.batch.findFirst({ where: { id: nextBatchId, tenantId }, select: { id: true } });
     if (!batch) throw new Error("Batch not found");
   }

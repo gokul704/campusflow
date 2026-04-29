@@ -100,22 +100,14 @@ Usage (tenant must already exist — run npm run api:seed first):
     console.log(`  ✅ Batch: ${b.name}`);
   }
 
-  // ── 3. Sections ──────────────────────────────────────────────
-  const sectionNames = ["A", "B", "C", "D"];
-  const sections: Record<string, string> = {}; // "batchName_section" → id
-
-  for (const [batchName, batchId] of Object.entries(batches)) {
-    for (const sName of sectionNames) {
-      const key = `${batchName}_${sName}`;
-      const existing = await prisma.section.findUnique({
-        where: { batchId_name: { batchId, name: sName } },
-      });
-      const section = existing ?? await prisma.section.create({
-        data: { tenantId: tenant.id, batchId, name: sName },
-      });
-      sections[key] = section.id;
-    }
-    console.log(`  ✅ Sections for ${batchName}: A, B, C, D`);
+  // ── 3. Legacy sections (no Section model in schema) ──────────
+  const sections: Record<string, string> = {}; // "batchName_section" → legacy token
+  for (const batchName of Object.keys(batches)) {
+    sections[`${batchName}_A`] = "A";
+    sections[`${batchName}_B`] = "B";
+    sections[`${batchName}_C`] = "C";
+    sections[`${batchName}_D`] = "D";
+    console.log(`  ✅ Legacy section labels for ${batchName}: A, B, C, D`);
   }
 
   // ── 4. Courses ───────────────────────────────────────────────
@@ -293,7 +285,7 @@ Usage (tenant must already exist — run npm run api:seed first):
 
     for (const { code, semester, facultyEmail } of sectionACourses) {
       const bc = await prisma.batchCourse.upsert({
-        where: { sectionId_courseId_semester: { sectionId: sectionA, courseId: courses[code], semester } },
+        where: { batchId_courseId_semester: { batchId, courseId: courses[code], semester } },
         create: { tenantId: tenant.id, batchId, sectionId: sectionA, courseId: courses[code], semester, facultyId: facultyIds[facultyEmail] },
         update: { facultyId: facultyIds[facultyEmail] },
       });
@@ -310,7 +302,7 @@ Usage (tenant must already exist — run npm run api:seed first):
 
     for (const { code, semester, facultyEmail } of sectionBCourses) {
       const bc = await prisma.batchCourse.upsert({
-        where: { sectionId_courseId_semester: { sectionId: sectionB, courseId: courses[code], semester } },
+        where: { batchId_courseId_semester: { batchId, courseId: courses[code], semester } },
         create: { tenantId: tenant.id, batchId, sectionId: sectionB, courseId: courses[code], semester, facultyId: facultyIds[facultyEmail] },
         update: { facultyId: facultyIds[facultyEmail] },
       });

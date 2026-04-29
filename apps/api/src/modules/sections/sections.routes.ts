@@ -6,7 +6,7 @@ import { listSectionsHandler, createSectionHandler, deleteSectionHandler } from 
 
 const router = Router();
 router.use(authenticate);
-router.get("/", requireModuleAction("sections", "view"), listSectionsHandler);
-router.post("/", authorize(...OFFICE_ROLES), requireModuleAction("sections", "create"), createSectionHandler);
-router.delete("/:id", authorize(...OFFICE_ROLES), requireModuleAction("sections", "delete"), deleteSectionHandler);
+router.get("/", requireModuleAction("batches", "view"), listSectionsHandler);
+router.post("/", authorize(...OFFICE_ROLES), requireModuleAction("batches", "create"), createSectionHandler);
+router.delete("/:id", authorize(...OFFICE_ROLES), requireModuleAction("batches", "delete"), deleteSectionHandler);
 export default router;
