@@ -26,6 +26,13 @@ export async function authenticate(
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  if (!req.tenant) {
+    res.status(400).json({
+      error: "Unable to identify tenant",
+      message: "Tenant context missing. Ensure request is sent to the API service URL.",
+    });
+    return;
+  }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
 

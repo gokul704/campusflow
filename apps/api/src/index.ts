@@ -78,6 +78,16 @@ app.use("/api/super/tenants", superAdminAuth, tenantsRoutes);
 
 // ─── Tenant-scoped routes ─────────────────────────────────────────────────────
 app.use("/api", tenantResolver);
+app.use("/api", (req, res, next) => {
+  if (!req.tenant) {
+    res.status(400).json({
+      error: "Unable to identify tenant",
+      message: "Tenant context missing. Ensure request is sent to the API service URL.",
+    });
+    return;
+  }
+  next();
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/departments", departmentsRoutes);
