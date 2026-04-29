@@ -33,6 +33,10 @@ const app = express();
 const PORT = process.env.PORT ?? 4000;
 const JSON_BODY_LIMIT = "75mb";
 
+// Render/NGINX sits in front of Express and forwards client IP via X-Forwarded-For.
+// Trust one proxy hop so rate limiter and req.ip work correctly in production.
+app.set("trust proxy", 1);
+
 /** Production CORS: *.campusflow.io, *.onrender.com, *.vercel.app, localhost, and CORS_ORIGINS (comma-separated full origins). */
 function productionCorsAllowed(origin: string | undefined): boolean {
   if (!origin) return true;
