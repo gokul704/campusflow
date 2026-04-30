@@ -2,6 +2,7 @@
 
 import { Bell, Search, Sun, Moon } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/api";
 
@@ -44,6 +45,18 @@ function decodeJWT(token: string): { email?: string; role?: string; firstName?: 
   }
 }
 
+/** Same cookie `authFetch` uses — layout `token` prop can lag after client-side login until a full refresh. */
+function readCfTokenFromDocument(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(^| )cf_token=([^;]+)/);
+  if (!match?.[2]) return null;
+  try {
+    return decodeURIComponent(match[2]);
+  } catch {
+    return match[2];
+  }
+}
+
 function getInitialsFromJwt(user: ReturnType<typeof decodeJWT>, email: string): string {
   const fn = user.firstName?.trim();
   const ln = user.lastName?.trim();
@@ -72,6 +85,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function TopHeader({ token }: TopHeaderProps) {
+  const pathname = usePathname();
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchHits, setSearchHits] = useState<SearchHit | null>(null);
@@ -85,7 +99,16 @@ export default function TopHeader({ token }: TopHeaderProps) {
   const notifWrapRef = useRef<HTMLDivElement>(null);
 
   const [dark, setDark] = useState(false);
-  const user = decodeJWT(token);
+  const [jwtClaims, setJwtClaims] = useState(() => decodeJWT(token));
+
+  useEffect(() => {
+    const fromCookie = readCfTokenFromDocument();
+    const looksLikeJwt = Boolean(fromCookie && fromCookie.split(".").length === 3);
+    const t = looksLikeJwt ? fromCookie! : token;
+    setJwtClaims(decodeJWT(t));
+  }, [token, pathname]);
+
+  const user = jwtClaims;
   const initials = user.email ? getInitialsFromJwt(user, user.email) : "AD";
   const roleLabel = ROLE_LABELS[user.role ?? ""] ?? user.role ?? "Admin";
   const displayName =
