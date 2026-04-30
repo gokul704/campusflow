@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "dotenv -e ../../.env -- tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "npm run build -w @campusflow/db && tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "seed": "npm run db:deploy --workspace=@campusflow/db && dotenv -e ../../.env -- tsx src/scripts/seed.ts",

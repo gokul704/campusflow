@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma, Prisma } from "@campusflow/db";
-import { PrismaClient } from "@prisma/client";
 
 const tenantSelect = {
   id: true,
@@ -29,21 +28,8 @@ const tenantSelectSql = Prisma.sql`
   "accessMatrix"
 `;
 
-let fallbackPrisma: PrismaClient | null = null;
-
-function getPrismaClient() {
-  if (prisma != null) return prisma;
-  if (fallbackPrisma == null) {
-    // Defensive fallback for production workspace-resolution issues.
-    fallbackPrisma = new PrismaClient({
-      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-    });
-  }
-  return fallbackPrisma;
-}
-
-async function queryTenantRaw(client: ReturnType<typeof getPrismaClient>, where: Prisma.Sql): Promise<TenantRow | null> {
-  const rows = await client.$queryRaw<TenantRow[]>(Prisma.sql`
+async function queryTenantRaw(where: Prisma.Sql): Promise<TenantRow | null> {
+  const rows = await prisma.$queryRaw<TenantRow[]>(Prisma.sql`
     SELECT ${tenantSelectSql}
     FROM "tenants"
     WHERE ${where}
@@ -69,15 +55,17 @@ export async function tenantResolver(
   next: NextFunction
 ): Promise<void> {
   try {
-    const prismaClient = getPrismaClient();
     if (prisma == null) {
-      console.error(
-        "[tenantResolver] @campusflow/db prisma export was undefined; using local PrismaClient fallback"
-      );
+      res.status(503).json({
+        error: "Service unavailable",
+        message:
+          "Database client is not initialized. Run `npm run build -w @campusflow/db` from the monorepo root so @campusflow/db ships compiled JS, and ensure prisma generate has run.",
+      });
+      return;
     }
 
     let tenant: TenantRow | null = null;
-    const tenantModel = (prismaClient as unknown as {
+    const tenantModel = (prisma as unknown as {
       tenant?: {
         findUnique: (args: unknown) => Promise<TenantRow | null>;
         findFirst: (args: unknown) => Promise<TenantRow | null>;
@@ -91,7 +79,7 @@ export async function tenantResolver(
             where: { publicKey: tenantKey },
             select: tenantSelect,
           })
-        : await queryTenantRaw(prismaClient, Prisma.sql`"publicKey" = ${tenantKey}`);
+        : await queryTenantRaw(Prisma.sql`"publicKey" = ${tenantKey}`);
     }
 
     if (!tenant) {
@@ -106,7 +94,7 @@ export async function tenantResolver(
                 where: { slug },
                 select: tenantSelect,
               })
-            : await queryTenantRaw(prismaClient, Prisma.sql`slug = ${slug}`);
+            : await queryTenantRaw(Prisma.sql`slug = ${slug}`);
         }
       }
     }
@@ -118,7 +106,7 @@ export async function tenantResolver(
             where: { slug: slugEnv },
             select: tenantSelect,
           })
-        : await queryTenantRaw(prismaClient, Prisma.sql`slug = ${slugEnv}`);
+        : await queryTenantRaw(Prisma.sql`slug = ${slugEnv}`);
       if (!bySlug) {
         res.status(400).json({
           error: "Unable to identify tenant",
@@ -136,7 +124,7 @@ export async function tenantResolver(
             where: { id: idEnv },
             select: tenantSelect,
           })
-        : await queryTenantRaw(prismaClient, Prisma.sql`id = ${idEnv}`);
+        : await queryTenantRaw(Prisma.sql`id = ${idEnv}`);
       if (!byId) {
         res.status(400).json({
           error: "Unable to identify tenant",
@@ -156,7 +144,7 @@ export async function tenantResolver(
             orderBy: { createdAt: "asc" },
             select: tenantSelect,
           })
-        : await queryTenantRaw(prismaClient, Prisma.sql`"isActive" = true`);
+        : await queryTenantRaw(Prisma.sql`"isActive" = true`);
     }
 
     if (!tenant) {
