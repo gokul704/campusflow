@@ -3,6 +3,8 @@ import { resolveDepartmentId } from "../../lib/bulkImportResolvers";
 import { hashPassword } from "../auth/auth.service";
 import * as timetableSvc from "../timetable/timetable.service";
 
+const DEFAULT_NEW_USER_PASSWORD_FALLBACK = "Demo@123";
+
 export async function listFaculty(tenantId: string, departmentId?: string, search?: string, page = 1, limit = 20) {
   const skip = (page - 1) * limit;
   const where: Record<string, unknown> = { tenantId };
@@ -85,10 +87,13 @@ export async function updateFacultyProfile(
 }
 
 async function resolveNewFacultyPassword(plain?: string | null): Promise<string> {
-  const p = plain?.trim() || process.env.DEFAULT_NEW_USER_PASSWORD?.trim();
+  const p =
+    plain?.trim() ||
+    process.env.DEFAULT_NEW_USER_PASSWORD?.trim() ||
+    DEFAULT_NEW_USER_PASSWORD_FALLBACK;
   if (!p || p.length < 8) {
     throw new Error(
-      "Set DEFAULT_NEW_USER_PASSWORD in .env (min 8 characters) or pass an explicit password for each user."
+      "Pass an explicit password or set DEFAULT_NEW_USER_PASSWORD in .env (min 8 chars)."
     );
   }
   return hashPassword(p);

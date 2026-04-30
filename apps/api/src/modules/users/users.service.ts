@@ -1,11 +1,16 @@
 import { prisma, Role } from "@campusflow/db";
 import { hashPassword } from "../auth/auth.service";
 
+const DEFAULT_NEW_USER_PASSWORD_FALLBACK = "Demo@123";
+
 async function resolveNewUserPasswordForCreate(plain?: string | null): Promise<string> {
-  const p = plain?.trim() || process.env.DEFAULT_NEW_USER_PASSWORD?.trim();
+  const p =
+    plain?.trim() ||
+    process.env.DEFAULT_NEW_USER_PASSWORD?.trim() ||
+    DEFAULT_NEW_USER_PASSWORD_FALLBACK;
   if (!p || p.length < 8) {
     throw new Error(
-      "Set DEFAULT_NEW_USER_PASSWORD in .env (min 8 characters) or pass an explicit password."
+      "Pass an explicit password or set DEFAULT_NEW_USER_PASSWORD in .env (min 8 chars)."
     );
   }
   return hashPassword(p);
