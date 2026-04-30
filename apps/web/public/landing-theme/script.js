@@ -181,25 +181,6 @@ function applyLanguage() {
   const code = currentLangMode === 'local' ? mishLocalCode : currentLangMode === 'hi' ? 'hi' : 'en';
   document.documentElement.lang = code === 'en' ? 'en' : code;
 
-  const hint = document.getElementById('langPickerHint');
-  if (hint) {
-    const enH = hint.getAttribute('data-en') || '';
-    const hiH = hint.getAttribute('data-hi') || enH;
-    if (currentLangMode === 'en') {
-      hint.textContent = enH;
-    } else if (currentLangMode === 'hi') {
-      hint.textContent = hiH;
-    } else {
-      const geo = typeof window !== 'undefined' ? window.__mishGeoMeta : null;
-      const nat = geo && geo.labelNative ? geo.labelNative : String(mishLocalCode || 'en').toUpperCase();
-      const eng = geo && geo.labelEn ? geo.labelEn : String(mishLocalCode || '');
-      hint.textContent =
-        'Regional: ' +
-        nat +
-        (eng && eng !== nat ? ' (' + eng + ')' : '') +
-        ' — page text uses local language where translations exist; switch above for full English or Hindi.';
-    }
-  }
 }
 
 function readStoredGeoMeta() {

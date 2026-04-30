@@ -55,6 +55,15 @@ export async function tenantResolver(
   next: NextFunction
 ): Promise<void> {
   try {
+    if (prisma == null) {
+      res.status(503).json({
+        error: "Service unavailable",
+        message:
+          "Database client is not initialized. Install from monorepo root so @campusflow/db resolves, and ensure postinstall runs prisma generate.",
+      });
+      return;
+    }
+
     let tenant: TenantRow | null = null;
     const tenantModel = (prisma as unknown as {
       tenant?: {
