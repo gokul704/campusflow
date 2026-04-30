@@ -124,6 +124,8 @@ function AttTip({
   isDark?: boolean;
 }) {
   if (!active || !payload?.length) return null;
+  const rows = payload.filter((p): p is { value: number; name: string } => p != null && typeof p?.name === "string");
+  if (!rows.length) return null;
   return (
     <div
       className={`rounded-lg border p-2 text-xs shadow-lg ${
@@ -131,7 +133,7 @@ function AttTip({
       }`}
     >
       <p className={`mb-1 font-semibold ${isDark ? "text-gray-200" : "text-gray-700"}`}>{label}</p>
-      {payload.map((p) => (
+      {rows.map((p) => (
         <div key={p.name} className="flex justify-between gap-4">
           <span className={isDark ? "text-gray-400" : "text-gray-500"}>
             {p.name === "present" ? "Present" : "Absent"}
@@ -169,13 +171,25 @@ function NoticeBoard({ recentEvents, recentAssignments, loading }: {
       details: "Academic calendar item",
     }));
 
-  const calendarFromAssignments = recentAssignments.map((a) => ({
-    id: a.id,
-    title: a.title,
-    date: a.dueDate ?? a.createdAt,
-    type: "ASSIGNMENT",
-    details: `${a.batchCourse.course.name} · ${a.batchCourse.batch.name} Sec ${a.batchCourse.section.name}`,
-  }));
+  const calendarFromAssignments = recentAssignments
+    .filter((a) => a?.id)
+    .map((a) => {
+      const bc = a.batchCourse;
+      const courseName = bc?.course?.name ?? "Course";
+      const batchName = bc?.batch?.name ?? "Batch";
+      const sec = bc?.section?.name;
+      const details =
+        sec != null && String(sec).length > 0
+          ? `${courseName} · ${batchName} · Sec ${sec}`
+          : `${courseName} · ${batchName}`;
+      return {
+        id: a.id,
+        title: a.title,
+        date: a.dueDate ?? a.createdAt,
+        type: "ASSIGNMENT",
+        details,
+      };
+    });
 
   const rows = (tab === "events" ? eventRows : [...calendarFromEvents, ...calendarFromAssignments])
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -485,8 +499,15 @@ export default function DashboardPage() {
   const gridStroke = isDark ? "#374151" : "#e5e7eb";
   const axisTick = isDark ? "#9ca3af" : "#6b7280";
 
-  const batchDist = charts?.batchDistribution ?? [];
-  const totalBatch = batchDist.reduce((s, b) => s + (b?.value ?? 0), 0);
+  const batchDist = (charts?.batchDistribution ?? []).filter(
+    (b): b is BatchDist =>
+      b != null &&
+      typeof (b as BatchDist).name === "string" &&
+      String((b as BatchDist).name).length > 0 &&
+      typeof (b as BatchDist).value === "number" &&
+      !Number.isNaN((b as BatchDist).value)
+  );
+  const totalBatch = batchDist.reduce((s, b) => s + (b.value ?? 0), 0);
   const normalizedRole = userRole.toUpperCase();
   const roleDefaultModules = useMemo(() => {
     if (!normalizedRole) return null;
@@ -622,8 +643,8 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="relative h-[220px] w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%" minHeight={220}>
+              <div className="relative w-full min-h-[220px] min-w-0">
+                <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie
                       data={batchDist}
@@ -662,7 +683,7 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
                 {batchDist.map((b, i) => (
-                  <span key={b.name ?? i} className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+                  <span key={`${b.name}-${i}`} className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
                     <span
                       className="h-2 w-2 flex-shrink-0 rounded-sm"
                       style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
@@ -695,10 +716,12 @@ export default function DashboardPage() {
               <Spinner />
             </div>
           ) : (
-            <div className="h-[240px] w-full min-w-0">
-              <ResponsiveContainer width="100%" height="100%" minHeight={240}>
+            <div className="w-full min-h-[240px] min-w-0">
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart
-                  data={charts?.weeklyAttendance ?? []}
+                  data={(charts?.weeklyAttendance ?? []).filter(
+                    (d) => d != null && typeof (d as WeeklyAtt).day === "string"
+                  )}
                   margin={{ top: 8, right: 8, left: 4, bottom: 4 }}
                   barGap={4}
                 >
