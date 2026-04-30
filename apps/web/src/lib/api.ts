@@ -7,29 +7,50 @@ function getTenantKey(): string {
   return process.env.NEXT_PUBLIC_TENANT_KEY ?? "";
 }
 
-export function resolveApiUrl(path: string): string {
+/** Non-null when the browser build is missing or misconfigured API base URL (common on Vercel if env was not set before build). */
+export function getApiConfigurationError(): string | null {
   const raw = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
   if (!raw) {
-    throw new Error(
-      "NEXT_PUBLIC_API_URL is not set. In apps/web/.env.local add e.g. NEXT_PUBLIC_API_URL=http://localhost:4000 and restart the dev server."
-    );
+    return "NEXT_PUBLIC_API_URL is not set. In Vercel: Project → Settings → Environment Variables, add NEXT_PUBLIC_API_URL with your full API URL (e.g. https://your-api.onrender.com), then redeploy. For local dev use apps/web/.env.local.";
   }
   if (!/^https?:\/\//i.test(raw)) {
-    throw new Error(
-      `NEXT_PUBLIC_API_URL must start with http:// or https:// (current value is not a full URL).`
-    );
+    return "NEXT_PUBLIC_API_URL must start with http:// or https:// (use the full origin, no path-only values).";
   }
+  return null;
+}
+
+function buildApiUrl(path: string): string {
+  const raw = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
   const base = raw.replace(/\/$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${base}${p}`;
+}
+
+/** Absolute URL to the API for a path (e.g. `/api/auth/me`). Throws if env is missing — prefer `apiFetch` or `getApiConfigurationError()`. */
+export function resolveApiUrl(path: string): string {
+  const err = getApiConfigurationError();
+  if (err) throw new Error(err);
+  return buildApiUrl(path);
+}
+
+function configurationErrorResponse(message: string): Response {
+  return new Response(JSON.stringify({ error: "API not configured", message }), {
+    status: 503,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 /**
  * Fetch wrapper for the API. Adds optional `x-tenant-key` when set.
  */
 export async function apiFetch(path: string, options: RequestInit = {}) {
+  const configErr = getApiConfigurationError();
+  if (configErr) {
+    return Promise.resolve(configurationErrorResponse(configErr));
+  }
+
   const key = getTenantKey();
-  const url = resolveApiUrl(path);
+  const url = buildApiUrl(path);
 
   return fetch(url, {
     ...options,
@@ -65,8 +86,9 @@ function getCookie(name: string): string | null {
 
 /** Same-origin `<a href>` / window.open: append JWT because cross-origin requests may not send `cf_token` cookie. */
 export function authenticatedDownloadUrl(apiPath: string): string {
+  if (getApiConfigurationError()) return "#";
   const token = getCookie("cf_token");
-  const base = resolveApiUrl(apiPath);
+  const base = buildApiUrl(apiPath);
   const sep = apiPath.includes("?") ? "&" : "?";
   return token ? `${base}${sep}token=${encodeURIComponent(token)}` : base;
 }
@@ -80,6 +102,7 @@ export function formatApiError(body: unknown): string {
   const o = body as Record<string, unknown>;
   const errStr = typeof o.error === "string" ? o.error : "";
   const msgStr = typeof o.message === "string" ? o.message : "";
+  if (errStr === "API not configured" && msgStr) return msgStr;
   // API often returns { error: "Internal server error", message: "<Prisma details>" } in development
   if (msgStr && /internal server error/i.test(errStr)) return msgStr;
   if (errStr) return errStr;

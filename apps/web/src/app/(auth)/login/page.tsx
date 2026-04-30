@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { apiFetch, formatApiError } from "@/lib/api";
+import { apiFetch, formatApiError, getApiConfigurationError } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +11,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const cfg = getApiConfigurationError();
+    if (cfg) setError(cfg);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
