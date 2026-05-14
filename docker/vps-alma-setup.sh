@@ -26,11 +26,13 @@ systemctl enable --now docker
 docker --version
 docker compose version
 
-echo "==> Firewalld: allow SSH, HTTP, HTTPS"
+echo "==> Firewalld: allow SSH, HTTP, HTTPS, GoDaddy Gen4 Nydus (TCP 2224)"
 if systemctl is-active --quiet firewalld; then
   firewall-cmd --permanent --add-service=ssh
   firewall-cmd --permanent --add-service=http
   firewall-cmd --permanent --add-service=https
+  # GoDaddy VPS Gen4: dashboard agents nydus-ex / nydus-ex-api (see GoDaddy help 27924).
+  firewall-cmd --permanent --add-port=2224/tcp
   firewall-cmd --reload
 else
   echo "firewalld not active; enable it if you use it: systemctl enable --now firewalld"
