@@ -8,12 +8,13 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
-COPY package.json package-lock.json ./
+# `package*.json` picks up `package-lock.json` when present; some VPS clones omit the lockfile.
+COPY package*.json ./
 COPY apps/web/package.json apps/web/
 COPY apps/api/package.json apps/api/
 COPY packages/db/package.json packages/db/
 # Root `postinstall` runs `prisma generate` before the Prisma schema exists in this layer.
-RUN npm ci --ignore-scripts
+RUN if [ -f package-lock.json ]; then npm ci --ignore-scripts; else npm install --ignore-scripts; fi
 
 FROM deps AS builder
 COPY . .
