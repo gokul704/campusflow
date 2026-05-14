@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+**/.next
+**/dist
+.git
+.gitignore
+**/.turbo
+coverage
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+apps/web/.next
+apps/api/dist
+packages/db/dist

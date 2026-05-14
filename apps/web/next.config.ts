@@ -10,6 +10,7 @@ const monorepoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..
 loadRootEnv({ path: path.join(monorepoRoot, ".env") });
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   outputFileTracingRoot: monorepoRoot,
   // Allow campusflow.io subdomains + custom tenant domains for images
   images: {

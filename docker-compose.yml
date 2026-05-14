@@ -1,0 +1,73 @@
+# Local / VPS stack: PostgreSQL + API + Next.js web.
+#
+# GoDaddy WHM: Docker only works on plans where you have root/SSH and Docker installed
+# (VPS, Dedicated, or some reseller “root” servers). Standard shared cPanel hosting cannot
+# run Docker; use a VPS from the same account or a managed Postgres + Node elsewhere.
+#
+# Before first boot: copy .env.example to .env and set secrets. For compose overrides use:
+#   NEXT_PUBLIC_API_URL / NEXT_PUBLIC_APP_DOMAIN — must be the browser-visible URLs (https://…).
+# Production API CORS: set CORS_ORIGINS to your Next.js origin (see apps/api/src/index.ts).
+# VPS + Nginx: see docker/vps.nginx.example.conf and docker-compose.vps.yml (loopback-only ports).
+# AlmaLinux Docker + firewalld: sudo bash docker/vps-alma-setup.sh   (optional: INSTALL_WEB=1 same command)
+
+services:
+  postgres:
+    restart: unless-stopped
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: campusflow
+      POSTGRES_PASSWORD: campusflow
+      POSTGRES_DB: campusflow
+    volumes:
+      - campusflow_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusflow -d campusflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
+      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
+      PORT: "4000"
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+
+  web:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+        NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-localhost:3000}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Next.js server route `api/public/visitor-count` uses Prisma; keep in sync with `api`.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
+      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+volumes:
+  campusflow_pgdata:

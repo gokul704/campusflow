@@ -1,0 +1,12 @@
+# Optional: use with the base file so API/web are not exposed on the public interface
+# (Nginx on the host proxies to 127.0.0.1).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+
+services:
+  api:
+    ports:
+      - "127.0.0.1:4000:4000"
+  web:
+    ports:
+      - "127.0.0.1:3000:3000"
