@@ -14,7 +14,11 @@ COPY apps/web/package.json apps/web/
 COPY apps/api/package.json apps/api/
 COPY packages/db/package.json packages/db/
 # Root `postinstall` runs `prisma generate` before the Prisma schema exists in this layer.
-RUN if [ -f package-lock.json ]; then npm ci --ignore-scripts; else npm install --ignore-scripts; fi
+# Cache mount speeds rebuilds; audit/fund off saves time on slow VPS links.
+ENV NPM_CONFIG_AUDIT=false
+ENV NPM_CONFIG_FUND=false
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f package-lock.json ]; then npm ci --ignore-scripts; else npm install --ignore-scripts; fi
 
 FROM deps AS builder
 COPY . .
@@ -30,7 +34,6 @@ RUN npm run build
 
 FROM base AS api
 ENV NODE_ENV=production
-RUN npm install -g prisma@6.19.2
 WORKDIR /app
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
