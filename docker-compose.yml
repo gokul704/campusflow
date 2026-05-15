@@ -38,8 +38,9 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
-      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
+      # Bundled Postgres only — fixed so `.env` cannot override with a Neon placeholder.
+      DATABASE_URL: postgresql://campusflow:campusflow@postgres:5432/campusflow
+      DIRECT_DATABASE_URL: postgresql://campusflow:campusflow@postgres:5432/campusflow
       PORT: "4000"
       NODE_ENV: production
     depends_on:
@@ -63,9 +64,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      # Next.js server route `api/public/visitor-count` uses Prisma; keep in sync with `api`.
-      DATABASE_URL: ${DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
-      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL:-postgresql://campusflow:campusflow@postgres:5432/campusflow}
+      # Next.js server route `api/public/visitor-count` uses Prisma; same bundled DB as `api`.
+      DATABASE_URL: postgresql://campusflow:campusflow@postgres:5432/campusflow
+      DIRECT_DATABASE_URL: postgresql://campusflow:campusflow@postgres:5432/campusflow
     depends_on:
       - api
     ports:
