@@ -7,7 +7,7 @@
 #   docker compose --env-file .env.dev \
 #     -f docker-compose.yml -f docker-compose.dev-vps.yml up -d
 #
-# Nginx: docker/vps.nginx.single-host.dev.conf → 127.0.0.1:3001 (web) / :4001 (api)
+# Nginx: docker/vps.nginx.single-host.dev-http.conf (no SSL) or .dev.conf (HTTPS)
 
 name: campusflow-dev
 
