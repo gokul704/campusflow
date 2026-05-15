@@ -8,9 +8,8 @@
 
 services:
   api:
-    # Compose merges `ports` by appending; !reset drops base `4000:4000` (avoids double-bind).
-    ports: !reset
+    ports:
       - "127.0.0.1:4000:4000"
   web:
-    ports: !reset
+    ports:
       - "127.0.0.1:3000:3000"

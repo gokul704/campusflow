@@ -1,0 +1,13 @@
+# Local / direct access (no Nginx): publish web and API on all interfaces.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# VPS with Nginx: use docker-compose.vps.yml instead (127.0.0.1 only).
+
+services:
+  api:
+    ports:
+      - "4000:4000"
+  web:
+    ports:
+      - "3000:3000"

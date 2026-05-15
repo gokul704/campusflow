@@ -7,7 +7,7 @@
 # Before first boot: copy .env.example to .env and set secrets. For compose overrides use:
 #   NEXT_PUBLIC_API_URL / NEXT_PUBLIC_APP_DOMAIN — must be the browser-visible URLs (https://…).
 # Production API CORS: set CORS_ORIGINS to your Next.js origin (see apps/api/src/index.ts).
-# VPS + Nginx: see docker/vps.nginx.example.conf and docker-compose.vps.yml (loopback-only ports).
+# Local IP access: docker-compose.dev.yml. VPS + Nginx: docker-compose.vps.yml.
 # AlmaLinux Docker + firewalld: sudo bash docker/vps-alma-setup.sh   (optional: INSTALL_WEB=1 same command)
 
 services:
@@ -46,8 +46,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "4000:4000"
+    # Host ports: docker-compose.dev.yml (local) or docker-compose.vps.yml (Nginx on VPS).
 
   web:
     restart: unless-stopped
@@ -69,8 +68,6 @@ services:
       DIRECT_DATABASE_URL: postgresql://campusflow:campusflow@postgres:5432/campusflow
     depends_on:
       - api
-    ports:
-      - "3000:3000"
 
 volumes:
   campusflow_pgdata:
