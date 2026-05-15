@@ -7,8 +7,9 @@ import { sendEmail } from "../../lib/email";
 import { DEV_OTP_BYPASS, isAuthEmailOtpBypassed } from "../../lib/devAuth";
 
 export async function login(tenantId: string, email: string, password: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const user = await prisma.user.findUnique({
-    where: { tenantId_email: { tenantId, email } },
+    where: { tenantId_email: { tenantId, email: normalizedEmail } },
   });
 
   if (!user || !user.isActive) {

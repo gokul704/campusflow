@@ -23,9 +23,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const res = await apiFetch("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -36,7 +37,8 @@ export default function LoginPage() {
       }
 
       // Store token in cookie (7 days)
-      document.cookie = `cf_token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Strict`;
+      const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `cf_token=${data.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax${secure}`;
       router.push("/dashboard");
     } catch (err) {
       if (err instanceof Error) {
