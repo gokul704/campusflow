@@ -11,6 +11,8 @@
 # AlmaLinux Docker + firewalld: sudo bash docker/vps-alma-setup.sh   (optional: INSTALL_WEB=1 same command)
 
 services:
+  # Official PostgreSQL from Docker Hub: https://hub.docker.com/_/postgres
+  # Other services connect using hostname `postgres` (the service name) on port 5432.
   postgres:
     restart: unless-stopped
     image: postgres:16-alpine
