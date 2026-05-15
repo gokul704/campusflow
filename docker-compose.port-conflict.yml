@@ -7,8 +7,8 @@
 
 services:
   api:
-    ports:
+    ports: !reset
       - "127.0.0.1:4001:4000"
   web:
-    ports:
+    ports: !reset
       - "127.0.0.1:3001:3000"
