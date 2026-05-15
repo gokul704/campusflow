@@ -1,0 +1,14 @@
+# Use when host ports 3000 or 4000 are already in use (e.g. another app or leftover bind).
+# Compose last file wins for `ports` — list this AFTER docker-compose.vps.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml -f docker-compose.port-conflict.yml up -d
+#
+# Point Nginx upstreams to 127.0.0.1:3001 (web) and 127.0.0.1:4001 (api); see docker/vps.nginx.example.conf.
+
+services:
+  api:
+    ports:
+      - "127.0.0.1:4001:4000"
+  web:
+    ports:
+      - "127.0.0.1:3001:3000"

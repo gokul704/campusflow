@@ -2,6 +2,9 @@
 # (Nginx on the host proxies to 127.0.0.1).
 #
 #   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+#
+# If bind fails ("address already in use" on 3000/4000), add the override file last:
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml -f docker-compose.port-conflict.yml up -d
 
 services:
   api:
