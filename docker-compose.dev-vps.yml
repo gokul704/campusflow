@@ -1,0 +1,26 @@
+# Dev stack on the same VPS as production (isolated DB, containers, and ports).
+# Project name `campusflow-dev` — does not collide with prod `campusflow`.
+#
+#   cp env.vps.dev.example .env.dev   # edit secrets and URLs
+#   docker compose --env-file .env.dev \
+#     -f docker-compose.yml -f docker-compose.dev-vps.yml build web
+#   docker compose --env-file .env.dev \
+#     -f docker-compose.yml -f docker-compose.dev-vps.yml up -d
+#
+# Nginx: docker/vps.nginx.single-host.dev.conf → 127.0.0.1:3001 (web) / :4001 (api)
+
+name: campusflow-dev
+
+services:
+  api:
+    env_file:
+      - path: .env.dev
+        required: false
+    ports:
+      - "127.0.0.1:4001:4000"
+  web:
+    env_file:
+      - path: .env.dev
+        required: false
+    ports:
+      - "127.0.0.1:3001:3000"

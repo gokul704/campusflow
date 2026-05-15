@@ -7,7 +7,8 @@
 # Before first boot: copy .env.example to .env and set secrets. For compose overrides use:
 #   NEXT_PUBLIC_API_URL / NEXT_PUBLIC_APP_DOMAIN — must be the browser-visible URLs (https://…).
 # Production API CORS: set CORS_ORIGINS to your Next.js origin (see apps/api/src/index.ts).
-# Local IP access: docker-compose.dev.yml. VPS + Nginx: docker-compose.vps.yml.
+# Local IP access: docker-compose.dev.yml. VPS prod: docker-compose.vps.yml.
+# VPS dev (second stack, dev.mish.org.in): docker-compose.dev-vps.yml + .env.dev — see env.vps.dev.example.
 # AlmaLinux Docker + firewalld: sudo bash docker/vps-alma-setup.sh   (optional: INSTALL_WEB=1 same command)
 
 services:
